@@ -1,0 +1,17 @@
+basic config file
+input C:\Users\Krzysztof\Desktop\models\suzanne\suzanne.obj
+output C:\Users\Krzysztof\Desktop\framebruffer.png 
+k 0
+xres 800
+yres 600
+xres 1000
+VPx 0.0
+VPy 0.0
+VPz 0.0
+LAx 0.0
+LAy 0.0
+LAz 1.0
+UPx 0.0
+UPy 1.0
+UPz 0.0
+yview 0.5
