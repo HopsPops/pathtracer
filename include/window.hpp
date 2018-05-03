@@ -1,13 +1,14 @@
 #pragma once
-#include <glad/glad.h>
+
+#include "glad.h"
 #include <GLFW/glfw3.h>
 #include <memory>
 
-class window {
+class Window {
 	private:
 		GLFWwindow* handle = nullptr;
 		public:
-		static std::unique_ptr<window> createWindow();
+		static std::unique_ptr<Window> createWindow();
 		void setTitle(const char*);
 		int width();
 		int height();

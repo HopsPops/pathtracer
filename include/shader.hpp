@@ -1,20 +1,68 @@
 #pragma once
 
 #include <glad/glad.h>
-#include <glm/glm.hpp>
-
-#include <string>
+#include <glm/detail/type_mat.hpp>
+#include <glm/detail/type_vec.hpp>
 #include <fstream>
-#include <sstream>
 #include <iostream>
+#include <sstream>
+#include <string>
+#include <memory>
 
-#include <glm/mat4x4.hpp>
-#include <glm/mat3x3.hpp>
-#include <glm/mat2x2.hpp>
-
-class shader {
+class Shader {
 	public:
-		shader(const char* vertexPath, const char* fragmentPath) {
+//		Shader(const char* vertexPath, const char* fragmentPath) {
+//			std::string vertexCode;
+//			std::string fragmentCode;
+//
+//			std::ifstream vShaderFile;
+//			std::ifstream fShaderFile;
+//
+//			vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+//			fShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+//			try {
+//				vShaderFile.open(vertexPath);
+//				fShaderFile.open(fragmentPath);
+//
+//				std::stringstream vShaderStream, fShaderStream;
+//
+//				vShaderStream << vShaderFile.rdbuf();
+//				fShaderStream << fShaderFile.rdbuf();
+//
+//				vShaderFile.close();
+//				fShaderFile.close();
+//
+//				vertexCode = vShaderStream.str();
+//				fragmentCode = fShaderStream.str();
+//			} catch (std::ifstream::failure& e) {
+//				std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ" << std::endl;
+//			}
+//			const char* vShaderCode = vertexCode.c_str();
+//			const char * fShaderCode = fragmentCode.c_str();
+//			unsigned int vertex, fragment;
+//
+//			vertex = glCreateShader(GL_VERTEX_SHADER);
+//			glShaderSource(vertex, 1, &vShaderCode, NULL);
+//			glCompileShader(vertex);
+//			checkCompileErrors(vertex, "VERTEX");
+//
+//			fragment = glCreateShader(GL_FRAGMENT_SHADER);
+//			glShaderSource(fragment, 1, &fShaderCode, NULL);
+//			glCompileShader(fragment);
+//			checkCompileErrors(fragment, "FRAGMENT");
+//
+//			id = glCreateProgram();
+//			glAttachShader(id, vertex);
+//			glAttachShader(id, fragment);
+//			glLinkProgram(id);
+//			checkCompileErrors(id, "PROGRAM");
+//
+//			glDeleteShader(vertex);
+//			glDeleteShader(fragment);
+//		}
+
+		static std::unique_ptr<Shader> loadFromFile(const char* vertexPath, const char* fragmentPath) {
+			Shader* shader = new Shader();
 			std::string vertexCode;
 			std::string fragmentCode;
 
@@ -24,7 +72,9 @@ class shader {
 			vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 			fShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 			try {
+				printf("loading vertex: %s\n", vertexPath);
 				vShaderFile.open(vertexPath);
+				printf("loading fragment: %s\n", fragmentPath);
 				fShaderFile.open(fragmentPath);
 
 				std::stringstream vShaderStream, fShaderStream;
@@ -54,15 +104,43 @@ class shader {
 			glCompileShader(fragment);
 			checkCompileErrors(fragment, "FRAGMENT");
 
-			id = glCreateProgram();
-			glAttachShader(id, vertex);
-			glAttachShader(id, fragment);
-			glLinkProgram(id);
-			checkCompileErrors(id, "PROGRAM");
+			shader->id = glCreateProgram();
+			glAttachShader(shader->id, vertex);
+			glAttachShader(shader->id, fragment);
+			glLinkProgram(shader->id);
+			checkCompileErrors(shader->id, "PROGRAM");
 
 			glDeleteShader(vertex);
 			glDeleteShader(fragment);
 
+			return std::unique_ptr<Shader>(shader);
+		}
+
+		static std::unique_ptr<Shader> loadRaw(const char* vertexCode, const char* fragmentCode) {
+			Shader* shader = new Shader();
+
+			unsigned int vertex = 0, fragment = 0;
+
+			vertex = glCreateShader(GL_VERTEX_SHADER);
+			glShaderSource(vertex, 1, &vertexCode, NULL);
+			glCompileShader(vertex);
+			checkCompileErrors(vertex, "VERTEX");
+
+			fragment = glCreateShader(GL_FRAGMENT_SHADER);
+			glShaderSource(fragment, 1, &fragmentCode, NULL);
+			glCompileShader(fragment);
+			checkCompileErrors(fragment, "FRAGMENT");
+
+			shader->id = glCreateProgram();
+			glAttachShader(shader->id, vertex);
+			glAttachShader(shader->id, fragment);
+			glLinkProgram(shader->id);
+			checkCompileErrors(shader->id, "PROGRAM");
+
+			glDeleteShader(vertex);
+			glDeleteShader(fragment);
+
+			return std::unique_ptr<Shader>(shader);
 		}
 
 		unsigned int getId() const {
@@ -122,8 +200,13 @@ class shader {
 		}
 
 	private:
-		unsigned int id;
-		void checkCompileErrors(GLuint shader, std::string type) {
+		unsigned int id = 0;
+
+		Shader() {
+		}
+		;
+
+		static void checkCompileErrors(GLuint shader, std::string type) {
 			GLint success;
 			GLchar infoLog[1024];
 			if (type != "PROGRAM") {

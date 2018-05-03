@@ -1,14 +1,15 @@
-#include <glm/glm.hpp>
-#include "../include/intersection.hpp"
-#include "types.hpp"
+#include <glm/detail/type_vec3.hpp>
+#include <glm/geometric.hpp>
+#include "intersection.hpp"
+#include "aabb.hpp"
 
-bool intersectTriangle(ray& ray, vec3 vertex0, vec3 vertex1, vec3 vertex2, vec3& outIntersectionPoint) {
+bool intersectTriangle(const Ray& ray, Vec3 vertex0, Vec3 vertex1, Vec3 vertex2, Vec3& outIntersectionPoint) {
 	const float EPSILON = 0.0000001;
 
-	vec3 rayVector = ray.getDirection();
-	vec3 rayOrigin = ray.getOrigin();
+	Vec3 rayVector = ray.getDirection();
+	Vec3 rayOrigin = ray.getOrigin();
 
-	vec3 edge1, edge2, h, s, q;
+	Vec3 edge1, edge2, h, s, q;
 
 	float a, f, u, v;
 	edge1 = vertex1 - vertex0;
@@ -43,7 +44,7 @@ bool intersectTriangle(ray& ray, vec3 vertex0, vec3 vertex1, vec3 vertex2, vec3&
 	}
 }
 
-bool intersectAABB(ray& ray, vec3 min, vec3 max) {
+bool intersectAABB(const Ray& ray, Vec3 min, Vec3 max) {
 	float txmin = (min.x - ray.getOrigin().x) / ray.getDirection().x;
 	float txmax = (max.x - ray.getOrigin().x) / ray.getDirection().x;
 
@@ -97,4 +98,7 @@ bool intersectAABB(ray& ray, vec3 min, vec3 max) {
 	return true;
 }
 
+bool intersectAABB(const Ray& ray, const AABB& aabb) {
+	return intersectAABB(ray, aabb.getMin(), aabb.getMax());
+}
 

@@ -6,47 +6,47 @@
 
 #include "types.hpp"
 
-class camera {
+class Camera {
 	private:
 		double fov = glm::radians(60.0f);
 		double pitch = 0.0f, yaw = 0.0f, roll = 0.0f;
 		double farPlane = 1000.0f, nearPlane = 0.1f;
-		vec3 position = vec3(0.0f, 0.0f, -1.0f);
-		vec3 up = vec3(0.0f, 1.0f, 0.0f);
+		Vec3 position = Vec3(0.0f, 0.0f, -1.0f);
+		Vec3 up = Vec3(0.0f, 1.0f, 0.0f);
 
 	public:
-		camera() {
+		Camera() {
 
 		}
 
-		glm::mat4x4 perspective(double aspectRatio) const {
+		Mat4 perspective(double aspectRatio) const {
 			return glm::perspective(fov, aspectRatio, nearPlane, farPlane);
 		}
 
-		vec3 getFront() const {
-			vec3 front = vec3(0.0f, 0.0f, -1.0f);
+		Vec3 getFront() const {
+			Vec3 front = Vec3(0.0f, 0.0f, -1.0f);
 
-			mat4 rotation = glm::eulerAngleXY(pitch, yaw);
-			front = rotation * glm::vec4(front, 0.0f);
+			Mat4 rotation = glm::eulerAngleXY(pitch, yaw);
+			front = rotation * Vec4(front, 0.0f);
 			glm::normalize(front);
 
 			return front;
 		}
 
-		vec3 getPosition() const {
+		Vec3 getPosition() const {
 			return position;
 		}
 
-		void setPosition(vec3 v) {
+		void setPosition(Vec3 v) {
 			position = v;
 		}
 
 		//TODO
-		void lookAt(vec3 v) {
+		void lookAt(Vec3 v) {
 
 		}
 
-		void setUp(vec3 v) {
+		void setUp(Vec3 v) {
 			up = v;
 		}
 

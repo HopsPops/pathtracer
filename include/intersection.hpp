@@ -1,7 +1,9 @@
 #pragma once
 
-#include "types.hpp"
 #include "ray.hpp"
+#include "aabb.hpp"
+#include "types.hpp"
 
-bool intersectTriangle(ray&, vec3, vec3, vec3, vec3&);
-bool intersectAABB(ray&, vec3, vec3);
+bool intersectTriangle(const Ray&, Vec3, Vec3, Vec3, Vec3&);
+bool intersectAABB(const Ray&, Vec3, Vec3);
+bool intersectAABB(const Ray&, const AABB&);

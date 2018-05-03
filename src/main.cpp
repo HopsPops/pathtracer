@@ -15,6 +15,7 @@
 #include "camera.hpp"
 #include "ray.hpp"
 #include "intersection.hpp"
+#include "renderer.hpp"
 
 #include "lodepng.h"
 
@@ -24,6 +25,7 @@
 #include <string>
 #include <vector>
 #include <string.h>
+#include <atomic>
 
 #include <iostream>
 
@@ -32,78 +34,66 @@
 #include "window.hpp"
 #include "config.hpp"
 
+#include "3dtree.hpp"
+
 using namespace std;
 
-void raytrace();
+void raytrace(Model*);
 
-window win;
-bool stateChanged = true;
+unique_ptr<Window> window;
+Renderer* renderer;
+OpenglModel* om;
+//bool stateChanged = true;
 float zOffset = 10.0f;
-model* m = nullptr;
-bool rotationEnabled = false;
-bool rotationInversed = false;
-float rotation = 0.0f;
-bool msaa = true;
-bool ambient = true;
-bool specular = true;
-bool diffuse = true;
+Model* m = nullptr;
 Config config;
-
-void draw(shader shader, mesh m) {
-
-	unsigned int diffuseNr = 1;
-	unsigned int specularNr = 1;
-	unsigned int normalNr = 1;
-	unsigned int heightNr = 1;
-
-	if (m.textures.empty()) {
-		shader.set("textures", false);
-	} else {
-		shader.set("textures", true);
-		for (unsigned int i = 0; i < m.textures.size(); i++) {
-			glActiveTexture(GL_TEXTURE0 + i);
-			string number;
-			string name = m.textures[i].type;
-			if (name == "texture_diffuse") {
-				number = std::to_string(diffuseNr++);
-			} else if (name == "texture_specular") {
-				number = std::to_string(specularNr++);
-			} else if (name == "texture_normal") {
-				number = std::to_string(normalNr++);
-			} else if (name == "texture_height") {
-				number = std::to_string(heightNr++);
-			}
-
-			glUniform1i(glGetUniformLocation(shader.getId(), (name + number).c_str()), i);
-			glBindTexture(GL_TEXTURE_2D, m.textures[i].id);
-		}
-	}
-	glBindVertexArray(m.vao);
-	glDrawElements(GL_TRIANGLES, m.indices.size(), GL_UNSIGNED_INT, 0);
-	glBindVertexArray(0);
-
-	glActiveTexture(GL_TEXTURE0);
-}
-
-void draw(shader shader, model m) {
-	for (unsigned int i = 0; i < m.meshes.size(); i++) {
-		draw(shader, m.meshes[i]);
-	}
-}
+Camera camera;
 
 void removeCurrentModel() {
 	if (m != nullptr) {
 		delete m;
 		m = nullptr;
 	}
+	if (om != nullptr) {
+		delete om;
+		m = nullptr;
+	}
 }
 
 void scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
-	zOffset += yoffset;
-//	if (zOffset < 0.0f) zOffset = 0.0f;
-//	if (zOffset > 100.0f) zOffset = 100.0f;
-//	cout << zOffset << endl;
-	stateChanged = true;
+	zOffset -= yoffset;
+}
+
+Vec3 multiply(Mat4 mat, Vec3 v) {
+	return Vec3(mat * Vec4(v, 1.0f));
+}
+
+Triangles modelToTriangles(Model* model, Mat4 transformation) {
+	vector<Triangle> triangles { };
+	for (Mesh mesh : model->meshes) {
+		for (unsigned int i = 0; i < mesh.indices.size();) {
+			Triangle triangle;
+			triangle.v1 = {multiply(transformation, mesh.positions[mesh.indices[i]]), mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
+			triangle.v2 = {multiply(transformation, mesh.positions[mesh.indices[i]]), mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
+			triangle.v3 = {multiply(transformation, mesh.positions[mesh.indices[i]]), mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
+			triangles.push_back(triangle);
+		}
+	}
+	return triangles;
+}
+
+Triangles modelToTriangles(Model* model) {
+	vector<Triangle> triangles { };
+	for (Mesh mesh : model->meshes) {
+		for (unsigned int i = 0; i < mesh.indices.size();) {
+			Triangle triangle;
+			triangle.v1 = {mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
+			triangle.v2 = {mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
+			triangle.v3 = {mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
+			triangles.push_back(triangle);
+		}
+	}
+	return triangles;
 }
 
 void dropCallback(GLFWwindow* window, int count, const char** paths) {
@@ -113,120 +103,103 @@ void dropCallback(GLFWwindow* window, int count, const char** paths) {
 
 	removeCurrentModel();
 
-	m = new model(path, true);
+	m = new Model(path, true);
+	om = new OpenglModel(*m);
 }
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
 	glViewport(0, 0, width, height);
-	stateChanged = true;
 }
 
-void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-	if (key == GLFW_KEY_R && action == GLFW_PRESS) {
-//		rotationEnabled = !rotationEnabled;
-	} else if (key == GLFW_KEY_X && action == GLFW_PRESS) {
+void keyCallback(GLFWwindow* win, int key, int scancode, int action, int mods) {
+	if (key == GLFW_KEY_X && action == GLFW_PRESS) {
 		removeCurrentModel();
-		stateChanged = true;
 	} else if (key == GLFW_KEY_M && action == GLFW_PRESS) {
-		if (msaa) {
-			glDisable(GL_MULTISAMPLE);
-		} else {
-			glEnable(GL_MULTISAMPLE);
-		}
-		msaa = !msaa;
-		stateChanged = true;
+		renderer->toggleMsaa();
 	} else if (key == GLFW_KEY_A && action == GLFW_PRESS) {
-		ambient = !ambient;
-		stateChanged = true;
+		renderer->toggleAmbientLight();
 	} else if (key == GLFW_KEY_S && action == GLFW_PRESS) {
-		specular = !specular;
-		stateChanged = true;
+		renderer->toggleSpecularLight();
 	} else if (key == GLFW_KEY_D && action == GLFW_PRESS) {
-		diffuse = !diffuse;
-		stateChanged = true;
+		renderer->toggleDiffuseLight();
 	} else if (key == GLFW_KEY_Z && action == GLFW_PRESS) {
-		rotation = 0.0f;
-		stateChanged = true;
-	} else if (key == GLFW_KEY_I && action == GLFW_PRESS) {
-		rotationInversed = !rotationInversed;
-		stateChanged = true;
 	} else if (key == GLFW_KEY_T && action == GLFW_PRESS) {
-		raytrace();
+		raytrace(m);
 	} else if (key == GLFW_KEY_Q && action == GLFW_PRESS) {
-		GLubyte* pixels = new GLubyte[4 * win.width() * win.height()] { 0 };
-		glReadPixels(0, 0, win.width(), win.height(), GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+		GLubyte* pixels = new GLubyte[4 * window->width() * window->height()] { 0 };
+		glReadPixels(0, 0, window->width(), window->height(), GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
-		for (int i = 0; i < (win.height() / 2); i++) {
-			std::swap_ranges(pixels + win.width() * (i) * 4, pixels + (win.width() * (i + 1) * 4), pixels + ((win.height() - 1 - i) * win.width()) * 4);
+		for (int i = 0; i < (window->height() / 2); i++) {
+			std::swap_ranges(pixels + window->width() * (i) * 4, pixels + (window->width() * (i + 1) * 4), pixels + ((window->height() - 1 - i) * window->width()) * 4);
 		}
 
-		unsigned error = lodepng::encode(string(config.output), pixels, win.width(), win.height());
+		unsigned error = lodepng::encode(string(config.output), pixels, window->width(), window->height());
 		cout << error << " " << config.output << endl;
 	}
 }
 
 void updateWindowTitle() {
 	string title("modelv [");
-	title += rotationEnabled ? "r" : "-";
-	title += ambient ? "a" : "-";
-	title += specular ? "s" : "-";
-	title += diffuse ? "d" : "-";
-	title += msaa ? "m" : "-";
+	title += renderer->isAmbientLight() ? "a" : "-";
+	title += renderer->isSpecularLight() ? "s" : "-";
+	title += renderer->isDiffuseLight() ? "d" : "-";
+	title += renderer->isMsaa() ? "m" : "-";
 	title += "]";
 	title += " w:h=";
-	title += std::to_string(win.width());
+	title += std::to_string(window->width());
 	title += ":";
-	title += std::to_string(win.height());
-//	glfwSetWindowTitle(window, title.c_str());
-	win.setTitle(title.c_str());
+	title += std::to_string(window->height());
+	window->setTitle(title.c_str());
 }
 
 void windowSizeCallback(GLFWwindow* window, int width, int height) {
 	updateWindowTitle();
 }
 
-bool shouldUpdate() {
-	return rotationEnabled || stateChanged;
-}
 
-camera cam;
-
-mat4 modelMat() {
-	mat4 model = mat4(1.0f);
-	model = glm::translate(model, vec3(-(m->bounding.max.x + m->bounding.min.x) / 2.0f, -(m->bounding.max.y + m->bounding.min.z) / 2.0f, -(m->bounding.max.y + m->bounding.min.z) / 2.0f - 3.0f - zOffset));
-	model = glm::rotate(model, rotation, vec3 { 0.0f, 1.0f, 0.0f });
+Mat4 transformations() {
+	Mat4 model = Mat4(1.0f);
+	model = glm::translate(model, Vec3(-(m->bounding.getMax().x + m->bounding.getMin().x) / 2.0f, -(m->bounding.getMax().y + m->bounding.getMin().z) / 2.0f, -(m->bounding.getMax().y + m->bounding.getMin().z) / 2.0f - 3.0f - zOffset));
+	model = glm::rotate(model, 0.0f, Vec3 { 0.0f, 1.0f, 0.0f });
 	return model;
 }
 
-vec3 multiply(mat4 mat, vec3 v) {
-	return vec3(mat * vec4(v, 1.0f));
-}
+class RaytraceStatistics {
+	public:
+		std::atomic<int> tests;
+		std::atomic<int> intersections;
+		std::atomic<int> rays;
+		RaytraceStatistics() noexcept :tests(0), intersections(0), rays(0) {};
+	};
 
-void rt(unsigned char* data, int h, int n) {
-	const int w = win.width();
+void rt(Model* model, unsigned char* data, int h, int n, RaytraceStatistics* stats) {
+	const int w = window->width();
 
-	mat4 modelMatrix = modelMat();
+	Mat4 modelMatrix = transformations();
 
 	for (int y = h; y < n; y++) {
 		for (int x = 0; x < w; x++) {
-			ray ray = ray::createRay(cam, x, y, w, win.height(), win.aspectRatio());
+			Ray ray = Ray::createRay(camera, x, y, w, window->height(), window->aspectRatio());
+			stats->rays++;
 
-			if (!intersectAABB(ray, multiply(modelMatrix, m->bounding.min), multiply(modelMatrix, m->bounding.max))) {
+			if (!intersectAABB(ray, multiply(modelMatrix, model->bounding.getMin()), multiply(modelMatrix, model->bounding.getMax()))) {
 				continue;
 			}
 
 			float depth = INFINITY;
 
-			for (mesh &mesh : m->meshes) {
-				if (!intersectAABB(ray, multiply(modelMatrix, mesh.bounding.min), multiply(modelMatrix, mesh.bounding.max))) {
+			for (Mesh &mesh : model->meshes) {
+				if (!intersectAABB(ray, multiply(modelMatrix, mesh.bounding.getMin()), multiply(modelMatrix, mesh.bounding.getMax()))) {
 					continue;
 				}
 
-				vec3 intersection(0.0, 0.0, 0.0);
-				for (unsigned int i = 0; i < mesh.vertices.size();) {
-					vec3 v1 = multiply(modelMatrix, mesh.vertices[i++].position);
-					vec3 v2 = multiply(modelMatrix, mesh.vertices[i++].position);
-					vec3 v3 = multiply(modelMatrix, mesh.vertices[i++].position);
+				Vec3 intersection(0.0, 0.0, 0.0);
+				for (unsigned int i = 0; i < mesh.positions.size();) {
+					Vec3 v1 = multiply(modelMatrix, mesh.positions[i++]);
+					Vec3 v2 = multiply(modelMatrix, mesh.positions[i++]);
+					Vec3 v3 = multiply(modelMatrix, mesh.positions[i++]);
+
+					stats->tests++;
 
 					if (!intersectTriangle(ray, v1, v2, v3, intersection)) {
 						continue;
@@ -239,6 +212,7 @@ void rt(unsigned char* data, int h, int n) {
 //					}
 //					depth = dist;
 					depth = 1.0; //póki co i tak sprawdzamy tylko czy natrafia na obiekt wiêc nie musimy robic depth-testu
+					stats->intersections++;
 					goto escape;
 					// wychodzimy z podwójnej pêtli
 				}
@@ -255,18 +229,23 @@ void rt(unsigned char* data, int h, int n) {
 	}
 }
 
-void raytrace() {
+void raytrace(Model* model) {
 	clock_t begin = clock();
 
-	unsigned char data[win.width() * win.height() * 3] = { 0 };
+	unsigned char data[window->width() * window->height() * 3] = { 0 };
 	const int q = std::thread::hardware_concurrency();
 	vector<thread> threads;
-	int h = win.height();
+	int h = window->height();
+
+	RaytraceStatistics* stats = new RaytraceStatistics();
+	stats->tests = 0;
+	stats->intersections = 0;
+
 	for (int i = 0; i < q; i++) {
 		int from = h / q * i;
 		int to = from + h / q;
-		cout << from << " " << to << endl;
-		threads.push_back(thread(rt, &data[0], from, to));
+//		cout << from << " " << to << endl;
+		threads.push_back(thread(rt, model, &data[0], from, to, stats));
 	}
 
 	for (auto& th : threads) {
@@ -276,57 +255,31 @@ void raytrace() {
 	clock_t end = clock();
 	double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
 
-	cout << "time " << elapsed_secs << endl;
+	cout << "seconds: " << elapsed_secs << endl;
+	cout << "total rays: " << stats->rays << endl;
+	cout << "total tests: " << stats->tests << endl;
+	cout << "total intersections: " << stats->intersections << endl;
 
-	unsigned error = lodepng::encode(string(config.output), data, win.width(), win.height(), LCT_RGB);
+	delete stats;
+
+	unsigned error = lodepng::encode(string(config.output), data, window->width(), window->height(), LCT_RGB);
 	cout << error << " " << config.output << endl;
 }
 
-bool hit = false;
-
-void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+void mouseButtonCallback(GLFWwindow* win, int button, int action, int mods) {
 	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-		ray r = ray::createRay(cam, win.cursorX(), win.cursorY(), win.width(), win.height(), win.aspectRatio());
-		r.print(cout);
-		mat4 mvp = cam.view() * modelMat();
+//		Ray r = Ray::createRay(camera, window->cursorX(), window->cursorY(), window->width(), window->height(), window->aspectRatio());
+//		r.print(cout);
+//		Mat4 mvp = camera.view() * transformations();
 
-		vec3 v1 = multiply(mvp, m->meshes[0].vertices[0].position);
-		vec3 v2 = multiply(mvp, m->meshes[0].vertices[1].position);
-		vec3 v3 = multiply(mvp, m->meshes[0].vertices[2].position);
+//		Vec3 v1 = multiply(mvp, m->meshes[0].vertices[0].position);
+//		Vec3 v2 = multiply(mvp, m->meshes[0].vertices[1].position);
+//		Vec3 v3 = multiply(mvp, m->meshes[0].vertices[2].position);
 
-		cout << "{{" << v1.x << ", " << v1.y << ", " << v1.z << "}, {" << v2.x << ", " << v2.y << ", " << v2.z << "}, {" << v3.x << ", " << v3.y << ", " << v3.z << "}}\n";
-		cout << std::flush;
-		vec3 result();
+//		cout << "{{" << v1.x << ", " << v1.y << ", " << v1.z << "}, {" << v2.x << ", " << v2.y << ", " << v2.z << "}, {" << v3.x << ", " << v3.y << ", " << v3.z << "}}\n";
+//		cout << std::flush;
+//		Vec3 result();
 	}
-}
-
-bool loadConfig(Config& c) {
-	FILE* f = fopen("plik.rtc", "r");
-	if (!f) {
-		return false;
-	}
-
-	char buffor[1000] = { 0 };
-	while (fgets(buffor, 1000, f) && !feof(f)) {
-		sscanf(buffor, "input %500s", c.input);
-		sscanf(buffor, "output %500s", c.output);
-		sscanf(buffor, "k %u", &c.k);
-		sscanf(buffor, "xres %u", &c.xres);
-		sscanf(buffor, "yres %u", &c.yres);
-		sscanf(buffor, "VPx %f", &c.viewPoint.x);
-		sscanf(buffor, "VPy %f", &c.viewPoint.y);
-		sscanf(buffor, "VPz %f", &c.viewPoint.z);
-		sscanf(buffor, "LAx %f", &c.lookAt.x);
-		sscanf(buffor, "LAy %f", &c.lookAt.y);
-		sscanf(buffor, "LAz %f", &c.lookAt.z);
-		sscanf(buffor, "yview %f", &c.yview);
-	}
-
-	replace(&c.input[0], &c.input[500], '\\', '/');
-	replace(&c.output[0], &c.output[500], '\\', '/');
-
-	fclose(f);
-	return true;
 }
 
 int main(int argc, char** argv) {
@@ -335,80 +288,58 @@ int main(int argc, char** argv) {
 	}
 	config.print(cout);
 
-//	cam.setPosition(config.viewPoint);
-//	cam.lookAt(config.lookAt);
-//	cam.setUp(config.up);
+	camera.setPosition(config.viewPoint);
+	camera.lookAt(config.lookAt);
+	camera.setUp(config.up);
 
-	win = *window::createWindow();
-	win.setFramebufferSizeCallback(framebufferSizeCallback);
-	win.setScrollCallback(scrollCallback);
-	win.setDropCallback(dropCallback);
-	win.setKeyCallback(keyCallback);
-	win.setMouseButtonCallback(mouseButtonCallback);
-	win.setWindowSizeCallback(windowSizeCallback);
+	window = Window::createWindow();
+	window->setFramebufferSizeCallback(framebufferSizeCallback);
+	window->setScrollCallback(scrollCallback);
+	window->setDropCallback(dropCallback);
+	window->setKeyCallback(keyCallback);
+	window->setMouseButtonCallback(mouseButtonCallback);
+	window->setWindowSizeCallback(windowSizeCallback);
+
+	renderer = new Renderer(window.get(), "shaders/vertex.glsl", "shaders/fragment.glsl");
 	updateWindowTitle();
 
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_MULTISAMPLE);
+	m = new Model(string(config.input), true);
+	om = new OpenglModel(*m);
 
-	m = new model(string(config.input), true);
-
-	shader s("shaders/vertex.glsl", "shaders/fragment.glsl");
+	KdTree tree(modelToTriangles(m), X);
+	printf("depth %u\n", depth(&tree));
+	printf("triangles %u\n", countTriangles(&tree));
+	printf("leafs %u\n", countLeafs(&tree));
+	printf("average %lf\n", averageTrianglesPerLeaf(&tree));
 
 	float deltaTime = 0.0f;
 	float lastFrame = 0.0f;
 
-	while (!win.shouldClose()) {
+	while (!window->shouldClose()) {
 		float currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 
-		if (deltaTime > 1.0f / 20.0f && shouldUpdate()) {
+		if (deltaTime > 1.0f / 60.0f) {
 			lastFrame = currentFrame;
 
-			glClearColor(0.75f, 0.7f, 0.7f, 1.0f);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			renderer->clearColor(0.75f, 0.7f, 0.7f);
+			renderer->clearColorBuffer();
+			renderer->clearDepthBuffer();
 
 			if (m) {
-				if (rotationEnabled) {
-					rotation += rotationInversed ? -0.03f : 0.03;
-				}
-
-				mat4 md = modelMat();
-				mat4 proj = cam.perspective(win.aspectRatio());
-				mat4 view = cam.view();
-
-				s.use();
-				s.set("projection", proj);
-				s.set("view", view);
-				s.set("model", md);
-
-				s.set("ambientColor", vec3 { 1.0f, 1.0f, 1.0f });
-				s.set("lightPosition", vec3 { 0.0f, 0.0f, 0.0f });
-				s.set("cameraPosition", vec3 { 0.0f, 0.0f, 0.0f });
-
-//				if (hit) {
-//					s.set("colorOverride", vec4 { 1.0f, 0.0f, 0.0f, 0.0f });
-//				} else {
-				s.set("colorOverride", vec4 { 1.0f, 1.0f, 1.0f, 0.0f });
-//				}
-
-				s.set("ambientLight", ambient);
-				s.set("specularLight", specular);
-				s.set("diffuseLight", diffuse);
-
-				draw(s, *m);
+				renderer->draw(*om, camera, transformations());
+				renderer->drawLine(multiply(transformations(), m->bounding.getMin()), multiply(transformations(), m->bounding.getMax()), camera, Vec4(1.0f, 0.0f, 0.0f, 1.0f));
 			}
 
-			win.swapBuffers();
-			stateChanged = true;
+			window->swapBuffers();
 		} else {
 			this_thread::sleep_for(chrono::milliseconds(2));
 			updateWindowTitle();
 		}
-		win.pollEvents();
+		window->pollEvents();
 	}
 
-	win.terminate();
+	window->terminate();
 	return 0;
 }
 

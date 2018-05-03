@@ -1,25 +1,25 @@
 #pragma once
 
+#include <camera.hpp>
 #include <glm/glm.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
-#include "camera.hpp"
 #include "types.hpp"
 #include <iostream>
 
-class ray {
+class Ray {
 	private:
-		vec3 origin, direction;
+		Vec3 origin, direction;
 
 	public:
-		ray(vec3 origin, vec3 direction);
+		Ray(Vec3 origin, Vec3 direction);
 
-		static ray createRay(camera&, int, int, int, int, double);
+		static Ray createRay(Camera&, int, int, int, int, double);
 
-		vec3 getOrigin();
+		Vec3 getOrigin() const;
 
-		vec3 getDirection();
+		Vec3 getDirection() const;
 
 		void print(std::ostream& stream);
 };

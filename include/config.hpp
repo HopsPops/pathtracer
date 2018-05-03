@@ -9,9 +9,9 @@ class Config {
 		unsigned int k = 0;
 		unsigned int xres = 800;
 		unsigned int yres = 600;
-		vec3 viewPoint = vec3(0.0f, 0.0f, 0.0f);
-		vec3 lookAt = vec3(0.0f, 0.0f, 1.0f);
-		vec3 up = vec3(0.0f, 1.0f, 0.0f);
+		Vec3 viewPoint = Vec3(0.0f, 0.0f, 0.0f);
+		Vec3 lookAt = Vec3(0.0f, 0.0f, 1.0f);
+		Vec3 up = Vec3(0.0f, 1.0f, 0.0f);
 		float yview;
 
 		void print(std::ostream& stream) {
@@ -33,3 +33,32 @@ class Config {
 		}
 
 };
+
+bool loadConfig(Config& c) {
+	FILE* f = fopen("plik.rtc", "r");
+	if (!f) {
+		return false;
+	}
+
+	char buffor[1000] = { 0 };
+	while (fgets(buffor, 1000, f) && !feof(f)) {
+		sscanf(buffor, "input %500s", c.input);
+		sscanf(buffor, "output %500s", c.output);
+		sscanf(buffor, "k %u", &c.k);
+		sscanf(buffor, "xres %u", &c.xres);
+		sscanf(buffor, "yres %u", &c.yres);
+		sscanf(buffor, "VPx %f", &c.viewPoint.x);
+		sscanf(buffor, "VPy %f", &c.viewPoint.y);
+		sscanf(buffor, "VPz %f", &c.viewPoint.z);
+		sscanf(buffor, "LAx %f", &c.lookAt.x);
+		sscanf(buffor, "LAy %f", &c.lookAt.y);
+		sscanf(buffor, "LAz %f", &c.lookAt.z);
+		sscanf(buffor, "yview %f", &c.yview);
+	}
+
+	replace(&c.input[0], &c.input[500], '\\', '/');
+	replace(&c.output[0], &c.output[500], '\\', '/');
+
+	fclose(f);
+	return true;
+}

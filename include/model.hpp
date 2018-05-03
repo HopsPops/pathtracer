@@ -1,9 +1,11 @@
 #pragma once
 
-#include "mesh.hpp"
-#include "shader.hpp"
+#include <mesh.hpp>
+#include <shader.hpp>
+#include "aabb.hpp"
 #include <vector>
 #include <string>
+#include <stdio.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -16,15 +18,15 @@
 
 unsigned int loadTexture(const char *path, const string &directory, bool gamma = false);
 
-class model {
+class Model {
 	public:
-		vector<texture> texturesLoaded;
-		vector<mesh> meshes;
+		vector<Texture> texturesLoaded;
+		vector<Mesh> meshes;
 		string directory;
 		bool gammaCorrection;
-		box bounding;
+		AABB bounding;
 
-		model(string const &path, bool gamma = false) :
+		Model(string const &path, bool gamma = false) :
 				gammaCorrection(gamma) {
 			loadModel(path);
 		}
@@ -44,23 +46,43 @@ class model {
 			processNode(scene->mRootNode, scene);
 
 			bounding = boundingBox();
+			printf("loaded model: %s\n", path.c_str());
+			printf("meshes:\n");
+			int i = 0;
+			for (Mesh m : meshes) {
+				printf("\tmesh %d\n", i++);
+//				printf("\t\tvertices %d\n", m.vertices.size());
+				printf("\t\tpositions %d\n", m.positions.size());
+				printf("\t\normals %d\n", m.normals.size());
+				printf("\t\ttexcoords %d\n", m.texcoords.size());
+				printf("\t\tindices %d\n", m.indices.size());
+				printf("\t\ttextures %d\n", m.textures.size());
+			}
 		}
 
-		box boundingBox() {
-			glm::vec3 minimum(100000.0f, 100000.0f, 100000.0f);
-			glm::vec3 maximum(-100000.0f, -100000.0f, -100000.0f);
-			for (mesh m : meshes) {
-				for (vertex v : m.vertices) {
-					minimum.x = min(minimum.x, v.position.x);
-					minimum.y = min(minimum.y, v.position.y);
-					minimum.z = min(minimum.z, v.position.z);
-
-					maximum.x = max(maximum.x, v.position.x);
-					maximum.y = max(maximum.y, v.position.y);
-					maximum.z = max(maximum.z, v.position.z);
+		AABB boundingBox() {
+			Vec3 minimum(100000.0f, 100000.0f, 100000.0f);
+			Vec3 maximum(-100000.0f, -100000.0f, -100000.0f);
+			for (Mesh m : meshes) {
+				for (Vec3 v : m.positions) {
+					minimum.x = min(minimum.x, v.x);
+					minimum.y = min(minimum.y, v.y);
+					minimum.z = min(minimum.z, v.z);
+					maximum.x = max(maximum.x, v.x);
+					maximum.y = max(maximum.y, v.y);
+					maximum.z = max(maximum.z, v.z);
 				}
+//				for (Vertex v : m.vertices) {
+//					minimum.x = min(minimum.x, v.position.x);
+//					minimum.y = min(minimum.y, v.position.y);
+//					minimum.z = min(minimum.z, v.position.z);
+//
+//					maximum.x = max(maximum.x, v.position.x);
+//					maximum.y = max(maximum.y, v.position.y);
+//					maximum.z = max(maximum.z, v.position.z);
+//				}
 			}
-			return box { minimum, maximum };
+			return AABB(minimum, maximum);
 		}
 
 		void processNode(aiNode *node, const aiScene *scene) {
@@ -74,37 +96,46 @@ class model {
 
 		}
 
-		mesh processMesh(aiMesh *m, const aiScene *scene) {
-			vector<vertex> vertices;
+		Mesh processMesh(aiMesh *m, const aiScene *scene) {
+//			vector<Vertex> vertices;
 			vector<unsigned int> indices;
-			vector<texture> textures;
+			vector<Texture> textures;
+
+			vector<Vec3> positions { };
+			vector<Vec2> texcoords { };
+			vector<Vec3> normals { };
 
 			for (unsigned int i = 0; i < m->mNumVertices; i++) {
-				vertex vertex;
-				glm::vec3 vector;
+//				Vertex vertex;
+//				Vec3 vector;
 
-				vector.x = m->mVertices[i].x;
-				vector.y = m->mVertices[i].y;
-				vector.z = m->mVertices[i].z;
-				vertex.position = vector;
+//				vector.x = m->mVertices[i].x;
+//				vector.y = m->mVertices[i].y;
+//				vector.z = m->mVertices[i].z;
+//				vertex.position = vector;
+				positions.push_back( { m->mVertices[i].x, m->mVertices[i].y, m->mVertices[i].z });
 
 				if (m->mNormals) {
-					vector.x = m->mNormals[i].x;
-					vector.y = m->mNormals[i].y;
-					vector.z = m->mNormals[i].z;
-					vertex.normals = vector;
+//					vector.x = m->mNormals[i].x;
+//					vector.y = m->mNormals[i].y;
+//					vector.z = m->mNormals[i].z;
+//					vertex.normals = vector;
+					normals.push_back( { m->mNormals[i].x, m->mNormals[i].y, m->mNormals[i].z });
 				} else {
-					vertex.normals = glm::vec3(0.0f, 0.0f, 0.0f);
+//					vertex.normals = Vec3(0.0f, 0.0f, 0.0f);
+					normals.push_back( { 0.0f, 0.0f, 0.0f });
 				}
 				if (m->mTextureCoords[0]) {
-					glm::vec2 vec;
+					Vec2 vec;
 					vec.x = m->mTextureCoords[0][i].x;
 					vec.y = m->mTextureCoords[0][i].y;
-					vertex.tex = vec;
+//					vertex.tex = vec;
+					texcoords.push_back( { m->mTextureCoords[0][i].x, m->mTextureCoords[0][i].y });
 				} else {
-					vertex.tex = glm::vec2(0.0f, 0.0f);
+//					vertex.tex = Vec2(0.0f, 0.0f);
+					texcoords.push_back( { 0.0f, 0.0f });
 				}
-				vertices.push_back(vertex);
+//				vertices.push_back(vertex);
 			}
 			for (unsigned int i = 0; i < m->mNumFaces; i++) {
 				aiFace face = m->mFaces[i];
@@ -114,23 +145,27 @@ class model {
 			}
 			aiMaterial* material = scene->mMaterials[m->mMaterialIndex];
 
-			vector<texture> diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
+			vector<Texture> diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
 			textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
 
-			vector<texture> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
+			vector<Texture> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
 			textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
 
-			std::vector<texture> normalMaps = loadMaterialTextures(material, aiTextureType_HEIGHT, "texture_normal");
+			std::vector<Texture> normalMaps = loadMaterialTextures(material, aiTextureType_HEIGHT, "texture_normal");
 			textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
 
-			std::vector<texture> heightMaps = loadMaterialTextures(material, aiTextureType_AMBIENT, "texture_height");
+			std::vector<Texture> heightMaps = loadMaterialTextures(material, aiTextureType_AMBIENT, "texture_height");
 			textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
+			Mesh mesh(positions, texcoords, normals, indices, textures);
+//			mesh.positions = positions;
+//			mesh.texcoords = texcoords;
+//			mesh.normals = normals;
 
-			return mesh(vertices, indices, textures);
+			return mesh;
 		}
 
-		vector<texture> loadMaterialTextures(aiMaterial *mat, aiTextureType type, string typeName) {
-			vector<texture> textures;
+		vector<Texture> loadMaterialTextures(aiMaterial *mat, aiTextureType type, string typeName) {
+			vector<Texture> textures;
 			for (unsigned int i = 0; i < mat->GetTextureCount(type); i++) {
 				aiString str;
 				mat->GetTexture(type, i, &str);
@@ -145,7 +180,7 @@ class model {
 					}
 				}
 				if (!skip) {
-					texture texture;
+					Texture texture;
 					texture.id = loadTexture(str.C_Str(), this->directory);
 					texture.type = typeName;
 					texture.path = str.C_Str();
