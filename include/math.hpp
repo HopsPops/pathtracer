@@ -54,7 +54,7 @@ class Vector4 {
 
 class Matrix4x4 {
 	private:
-		std::array<float, 16> data = { 0 };
+		std::array<float, 16> data {};
 		Matrix4x4() {};
 
 	public:

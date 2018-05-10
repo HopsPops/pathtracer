@@ -1,6 +1,6 @@
 #pragma once
 
-#include <glad/glad.h>
+#include <external/glad.h>
 #include "math.hpp"
 #include <fstream>
 #include <iostream>
