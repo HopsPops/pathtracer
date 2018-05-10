@@ -1,5 +1,8 @@
 #include "math.hpp"
-#include "cmath"
+
+float toRadians(float degrees) {
+	return degrees * M_PI / 180.0f;
+}
 
 Matrix4x4 Matrix4x4::zeroMatrix() {
 	return Matrix4x4();
@@ -22,7 +25,27 @@ Matrix4x4 Matrix4x4::translationMatrix(Vector3 translation) {
 	return result;
 }
 
-Matrix4x4 Matrix4x4::rotationMatrix() {
+Matrix4x4 Matrix4x4::rotationMatrixXYZ(float x, float y, float z) {
+	float cx = cos(x);
+	float cy = cos(y);
+	float cz = cos(z);
+
+	float sx = sin(x);
+	float sy = sin(y);
+	float sz = sin(z);
+
+	Matrix4x4 result = zeroMatrix();
+	result.data[0] = cy * cz;
+	result.data[1] = -cz * sx * sy - cx * sz;
+	result.data[2] = -cx * cz * sy + sx * sz;
+	result.data[4] = cy * sz;
+	result.data[5] = cx * cz - sx * sy * sz;
+	result.data[6] = -cz * sx - cx * sy * sz;
+	result.data[8] = sy;
+	result.data[9] = cy * sx;
+	result.data[10] = cx * cy;
+
+	return result;
 }
 
 Matrix4x4 Matrix4x4::multiply(const Matrix4x4& m1, const Matrix4x4& m2) {
@@ -121,30 +144,30 @@ void Matrix4x4::scale(float factor) {
 Matrix4x4 Matrix4x4::projection(float left, float right, float bottom, float top, float near, float far) {
 	Matrix4x4 result = Matrix4x4::zeroMatrix();
 	result.data[0] = 2.0f * near / (right - left);
-	result.data[0] = 0.0f;
-	result.data[0] = (right + left) / (right - left);
-	result.data[0] = 0.0f;
+	result.data[1] = 0.0f;
+	result.data[2] = (right + left) / (right - left);
+	result.data[3] = 0.0f;
 
-	result.data[0] = 0.0f;
-	result.data[0] = 2.0f * near / (top - bottom);
-	result.data[0] = (top + bottom) / (top - bottom);
-	result.data[0] = 0.0f;
+	result.data[4] = 0.0f;
+	result.data[5] = 2.0f * near / (top - bottom);
+	result.data[6] = (top + bottom) / (top - bottom);
+	result.data[7] = 0.0f;
 
-	result.data[0] = 0.0f;
-	result.data[0] = 0.0f;
-	result.data[0] = -(far + near) / (far - near);
-	result.data[0] = -(2.0f * far * near) / (far - near);
+	result.data[8] = 0.0f;
+	result.data[9] = 0.0f;
+	result.data[10] = -(far + near) / (far - near);
+	result.data[11] = -(2.0f * far * near) / (far - near);
 
-	result.data[0] = 0.0f;
-	result.data[0] = 0.0f;
-	result.data[0] = -1.0f;
-	result.data[0] = 0.0f;
+	result.data[12] = 0.0f;
+	result.data[13] = 0.0f;
+	result.data[14] = -1.0f;
+	result.data[15] = 0.0f;
 	return result;
 }
 
 Matrix4x4 Matrix4x4::projection(float fovy, float aspectRatio, float near, float far) {
 //	float tan = ;
-	float height = near * tan(fovy / 2.0);
+	float height = near * tan(fovy / 2.0f);
 	float width = height * aspectRatio;
 	return projection(-width, width, -height, height, near, far);
 }
@@ -153,7 +176,7 @@ std::array<float, 16> Matrix4x4::getData() {
 	return data;
 }
 
-Matrix4x4 Matrix4x4::lookAt(Vector3 eye, Vector3 center, Vector3 upDir) {
+Matrix4x4 Matrix4x4::lookAt(const Vector3& eye, const Vector3& center, const Vector3& upDir) {
 	Vector3 dir = eye - center;
 	dir.normalize();
 
@@ -163,7 +186,7 @@ Matrix4x4 Matrix4x4::lookAt(Vector3 eye, Vector3 center, Vector3 upDir) {
 	Vector3 up = Vector3::cross(dir, side);
 	up.normalize();
 
-	Matrix4x4 result = zeroMatrix();
+	Matrix4x4 result = identityMatrix();
 	result.data[0] = side.x;
 	result.data[1] = side.y;
 	result.data[2] = side.z;
@@ -210,10 +233,42 @@ Vector3 Vector3::cross(Vector3 v1, Vector3 v2) {
 	return Vector3(v1.y * v2.z - v1.z * v2.y, v1.z * v2.x - v1.x * v2.z, v1.x * v2.y - v1.y * v2.x);
 }
 
-Vector3 Vector3::operator -(Vector3 v) {
+Vector3 Vector3::operator -(Vector3 v) const {
 	return Vector3(x - v.x, y - v.y, z - v.z);
 }
 
-Vector3 Vector3::operator +(Vector3 v) {
+Vector3 Vector3::operator +(Vector3 v) const {
 	return Vector3(x + v.x, y + v.y, z + v.z);
 }
+
+Vector3 Vector3::operator *(float factor) {
+	return Vector3(x * factor, y * factor, z * factor);
+}
+
+const std::array<float, 16> Matrix4x4::getData() const {
+	return data;
+}
+
+Vector4 Matrix4x4::operator *(const Vector4& v) {
+	return multiply(*this, v);
+}
+
+const Vector3 Vector3::operator =(const Vector3& v) {
+	x = v.x;
+	y = v.y;
+	z = v.z;
+	return *this;
+}
+
+const Vector4 Vector4::operator =(const Vector4& v) {
+	x = v.x;
+	y = v.y;
+	z = v.z;
+	w = v.w;
+	return *this;
+}
+
+Vector4::operator Vector3() const {
+	return Vector3(x, y, z);
+}
+

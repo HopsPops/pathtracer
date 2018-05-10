@@ -1,41 +1,39 @@
-#include <glm/detail/type_vec3.hpp>
-#include <glm/geometric.hpp>
 #include "intersection.hpp"
 #include "aabb.hpp"
 
-bool intersectTriangle(const Ray& ray, Vec3 vertex0, Vec3 vertex1, Vec3 vertex2, Vec3& outIntersectionPoint) {
+bool intersectTriangle(const Ray& ray, Vector3 vertex0, Vector3 vertex1, Vector3 vertex2, Vector3& outIntersectionPoint) {
 	const float EPSILON = 0.0000001;
 
-	Vec3 rayVector = ray.getDirection();
-	Vec3 rayOrigin = ray.getOrigin();
+	Vector3 rayVector = ray.getDirection();
+	Vector3 rayOrigin = ray.getOrigin();
 
-	Vec3 edge1, edge2, h, s, q;
+	Vector3 edge1, edge2, h, s, q;
 
 	float a, f, u, v;
 	edge1 = vertex1 - vertex0;
 	edge2 = vertex2 - vertex0;
 
-	h = glm::cross(rayVector, edge2);
-	a = glm::dot(edge1, h);
+	h = Vector3::cross(rayVector, edge2);
+	a = Vector3::dot(edge1, h);
 
 	if (a > -EPSILON && a < EPSILON) {
 		return false;
 	}
 	f = 1.0 / a;
 	s = rayOrigin - vertex0;
-	u = f * glm::dot(s, h);
+	u = f * Vector3::dot(s, h);
 
 	if (u < 0.0 || u > 1.0) {
 		return false;
 	}
 
-	q = glm::cross(s, edge1);
-	v = f * glm::dot(rayVector, q);
+	q = Vector3::cross(s, edge1);
+	v = f * Vector3::dot(rayVector, q);
 
 	if (v < 0.0 || u + v > 1.0) {
 		return false;
 	}
-	float t = f * glm::dot(edge2, q);
+	float t = f * Vector3::dot(edge2, q);
 	if (t > EPSILON) {
 		outIntersectionPoint = rayOrigin + rayVector * t;
 		return true;
@@ -44,7 +42,7 @@ bool intersectTriangle(const Ray& ray, Vec3 vertex0, Vec3 vertex1, Vec3 vertex2,
 	}
 }
 
-bool intersectAABB(const Ray& ray, Vec3 min, Vec3 max) {
+bool intersectAABB(const Ray& ray, Vector3 min, Vector3 max) {
 	float txmin = (min.x - ray.getOrigin().x) / ray.getDirection().x;
 	float txmax = (max.x - ray.getOrigin().x) / ray.getDirection().x;
 

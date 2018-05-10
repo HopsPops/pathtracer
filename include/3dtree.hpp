@@ -6,6 +6,7 @@
 #include <vector>
 #include <tuple>
 #include <stdio.h>
+#include "math.hpp"
 
 enum Axis {
 	X = 0, Y = 1, Z = 2
@@ -47,8 +48,8 @@ class Modular {
 		}
 };
 
-Vec3 triagnlesMedian(Triangles trigs) {
-	Vec3 median { 0.0f, 0.0f, 0.0f };
+Vector3 triagnlesMedian(Triangles trigs) {
+	Vector3 median { 0.0f, 0.0f, 0.0f };
 	for (Triangle t : trigs) {
 		median.x += t.v1.position.x / (float) trigs.size() / 3.0;
 		median.y += t.v1.position.y / (float) trigs.size() / 3.0;
@@ -65,7 +66,7 @@ Vec3 triagnlesMedian(Triangles trigs) {
 	return median;
 }
 
-std::tuple<Triangles, Triangles> partitionX(Triangles triangles, Vec3 separator) {
+std::tuple<Triangles, Triangles> partitionX(Triangles triangles, Vector3 separator) {
 	Triangles left;
 	Triangles right;
 	for (Triangle t : triangles) {
@@ -95,7 +96,7 @@ std::tuple<Triangles, Triangles> partitionX(Triangles triangles, Vec3 separator)
 	}
 	return std::make_tuple(left, right);
 }
-std::tuple<Triangles, Triangles> partitionY(Triangles triangles, Vec3 separator) {
+std::tuple<Triangles, Triangles> partitionY(Triangles triangles, Vector3 separator) {
 	Triangles left;
 	Triangles right;
 	for (Triangle t : triangles) {
@@ -125,7 +126,7 @@ std::tuple<Triangles, Triangles> partitionY(Triangles triangles, Vec3 separator)
 	}
 	return std::make_tuple(left, right);
 }
-std::tuple<Triangles, Triangles> partitionZ(Triangles triangles, Vec3 separator) {
+std::tuple<Triangles, Triangles> partitionZ(Triangles triangles, Vector3 separator) {
 	Triangles left;
 	Triangles right;
 	for (Triangle t : triangles) {
@@ -156,7 +157,7 @@ std::tuple<Triangles, Triangles> partitionZ(Triangles triangles, Vec3 separator)
 	return std::make_tuple(left, right);
 }
 
-std::tuple<Triangles, Triangles> partition(Triangles triangles, Vec3 separator, Modular axis) {
+std::tuple<Triangles, Triangles> partition(Triangles triangles, Vector3 separator, Modular axis) {
 	if (axis == X) {
 		return partitionX(triangles, separator);
 	} else if (axis == Y) {
@@ -169,8 +170,8 @@ std::tuple<Triangles, Triangles> partition(Triangles triangles, Vec3 separator, 
 }
 
 AABB trianglesAABB(Triangles triangles) {
-	Vec3 minimum(100000.0f, 100000.0f, 100000.0f);
-	Vec3 maximum(-100000.0f, -100000.0f, -100000.0f);
+	Vector3 minimum(100000.0f, 100000.0f, 100000.0f);
+	Vector3 maximum(-100000.0f, -100000.0f, -100000.0f);
 	for (Triangle t : triangles) {
 		minimum.x = min(minimum.x, t.v1.position.x);
 		minimum.y = min(minimum.y, t.v1.position.y);
@@ -208,9 +209,9 @@ class KdTree {
 		KdTree(Triangles triangles, Axis axis) {
 			this->axis = Modular(axis, 3);
 			this->aabb = trianglesAABB(triangles);
-			if (triangles.size() > 128) {
+			if (triangles.size() > 32) {
 //				printf("splitting %d\n", triangles.size());
-				Vec3 median = triagnlesMedian(triangles);
+				Vector3 median = triagnlesMedian(triangles);
 				std::tuple<Triangles, Triangles> splited = partition(triangles, median, this->axis);
 //				printf("left %d\n", std::get<0>(splited).size());
 //				printf("right %d\n", std::get<1>(splited).size());
@@ -237,7 +238,7 @@ unsigned int depth(const KdTree* tree, unsigned int level) {
 	if (tree->isLeaf()) {
 		return level + 1;
 	} else {
-		return max(depth(tree->left, level + 1), depth(tree->right, level + 1));
+		return std::max(depth(tree->left, level + 1), depth(tree->right, level + 1));
 	}
 }
 
@@ -265,14 +266,25 @@ double averageTrianglesPerLeaf(const KdTree* tree) {
 	return (double) countTriangles(tree) / (double) countLeafs(tree);
 }
 
-void traverse(const Ray& ray, const KdTree* tree, vector<const KdTree*>& result) {
+void traverse(const Ray& ray, const KdTree* tree, vector<const KdTree*>* result) {
 	if (intersectAABB(ray, tree->aabb)) {
 		if (tree->isLeaf()) {
-			result.push_back(tree);
+			result->push_back(tree);
 		} else {
 			traverse(ray, tree->left, result);
 			traverse(ray, tree->right, result);
 		}
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
 

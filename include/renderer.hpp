@@ -33,21 +33,21 @@ class OpenglMesh {
 			glGenBuffers(1, &vboTexcoords);
 
 			glBindBuffer(GL_ARRAY_BUFFER, vboPositions);
-			glBufferData(GL_ARRAY_BUFFER, mesh.positions.size() * sizeof(Vec3), &mesh.positions[0], GL_STATIC_DRAW);
+			glBufferData(GL_ARRAY_BUFFER, mesh.positions.size() * sizeof(Vector3), &mesh.positions[0], GL_STATIC_DRAW);
 			glEnableVertexAttribArray(0);
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vec3), (void*) 0);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vector3), (void*) 0);
 
 
 			glBindBuffer(GL_ARRAY_BUFFER, vboNormals);
-			glBufferData(GL_ARRAY_BUFFER, mesh.normals.size() * sizeof(Vec3), &mesh.normals[0], GL_STATIC_DRAW);
+			glBufferData(GL_ARRAY_BUFFER, mesh.normals.size() * sizeof(Vector3), &mesh.normals[0], GL_STATIC_DRAW);
 			glEnableVertexAttribArray(1);
-			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vec3), (void*) 0);
+			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vector3), (void*) 0);
 
 
 			glBindBuffer(GL_ARRAY_BUFFER, vboTexcoords);
-			glBufferData(GL_ARRAY_BUFFER, mesh.texcoords.size() * sizeof(Vec2), &mesh.texcoords[0], GL_STATIC_DRAW);
+			glBufferData(GL_ARRAY_BUFFER, mesh.texcoords.size() * sizeof(Vector2), &mesh.texcoords[0], GL_STATIC_DRAW);
 			glEnableVertexAttribArray(2);
-			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vec2), (void*) 0);
+			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vector2), (void*) 0);
 
 
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
@@ -98,29 +98,6 @@ class OpenglMesh {
 		}
 
 };
-
-const char* lineVertexShader = "#version 330 core\r\n"
-		"\r\n"
-		"layout (location = 0) in vec3 positionIn;\r\n"
-		"\r\n"
-		"uniform mat4 model;\r\n"
-		"uniform mat4 view;\r\n"
-		"uniform mat4 projection;\r\n"
-		"\r\n"
-		"\r\n"
-		"void main()\r\n"
-		"{\r\n"
-		"    gl_Position = projection * view * model * vec4(positionIn, 1.0);\r\n"
-		"}";
-const char* lineFragmentShader = "#version 330 core\r\n"
-		"\r\n"
-		"out vec4 outColor;\r\n"
-		"\r\n"
-		"uniform vec4 color;\r\n"
-		"\r\n"
-		"void main() {\r\n"
-		"    outColor = color;\r\n"
-		"} ";
 
 class OpenglModel {
 	private:
@@ -214,7 +191,7 @@ class Renderer {
 			}
 		}
 
-		void drawLine(Vec3 v1, Vec3 v2, const Camera& camera, Vec4 color) {
+		void drawLine(Vector3 v1, Vector3 v2, const Camera& camera, Vector4 color) {
 			lineShader->use();
 			lineShader->set("color", color);
 			lineShader->set("view", camera.view());
@@ -242,18 +219,18 @@ class Renderer {
 			glDeleteVertexArrays(1, &vao);
 		}
 
-		void draw(OpenglMesh m, const Camera& camera, const Mat4& model, Textures textures) {
+		void draw(OpenglMesh m, const Camera& camera, const Matrix4x4& model, Textures textures) {
 			unsigned int diffuseNr = 1;
 			unsigned int specularNr = 1;
 			unsigned int normalNr = 1;
 			unsigned int heightNr = 1;
 
 			defaultShader->use();
-			defaultShader->set("ambientColor", Vec3 { 1.0f, 1.0f, 1.0f });
-			defaultShader->set("lightPosition", Vec3 { 0.0f, 0.0f, 0.0f });
-			defaultShader->set("cameraPosition", Vec3 { 0.0f, 0.0f, 0.0f });
+			defaultShader->set("ambientColor", Vector3 { 1.0f, 1.0f, 1.0f });
+			defaultShader->set("lightPosition", Vector3 { 0.0f, 0.0f, 0.0f });
+			defaultShader->set("cameraPosition", Vector3 { 0.0f, 0.0f, 0.0f });
 
-			defaultShader->set("colorOverride", Vec4 { 1.0f, 1.0f, 1.0f, 0.0f });
+			defaultShader->set("colorOverride", Vector4 { 1.0f, 1.0f, 1.0f, 0.0f });
 			defaultShader->set("ambientLight", ambient);
 			defaultShader->set("specularLight", specular);
 			defaultShader->set("diffuseLight", diffuse);
@@ -292,13 +269,13 @@ class Renderer {
 			glActiveTexture (GL_TEXTURE0);
 		}
 
-		void draw(const OpenglMesh& m, const Camera& camera, const Mat4& model) {
+		void draw(const OpenglMesh& m, const Camera& camera, const Matrix4x4& model) {
 			defaultShader->use();
-			defaultShader->set("ambientColor", Vec3 { 1.0f, 1.0f, 1.0f });
-			defaultShader->set("lightPosition", Vec3 { 0.0f, 0.0f, 0.0f });
-			defaultShader->set("cameraPosition", Vec3 { 0.0f, 0.0f, 0.0f });
+			defaultShader->set("ambientColor", Vector3 { 1.0f, 1.0f, 1.0f });
+			defaultShader->set("lightPosition", Vector3 { 0.0f, 0.0f, 0.0f });
+			defaultShader->set("cameraPosition", Vector3 { 0.0f, 0.0f, 0.0f });
 
-			defaultShader->set("colorOverride", Vec4 { 1.0f, 1.0f, 1.0f, 0.0f });
+			defaultShader->set("colorOverride", Vector4 { 1.0f, 1.0f, 1.0f, 0.0f });
 			defaultShader->set("ambientLight", ambient);
 			defaultShader->set("specularLight", specular);
 			defaultShader->set("diffuseLight", diffuse);
@@ -313,7 +290,7 @@ class Renderer {
 			glBindVertexArray(0);
 		}
 
-		void draw(const OpenglModel& m, const Camera& camera, const Mat4& model) {
+		void draw(const OpenglModel& m, const Camera& camera, const Matrix4x4& model) {
 			for (unsigned int i = 0; i < m.getMeshes().size(); i++) {
 				draw(m.getMeshes()[i], camera, model);
 			}

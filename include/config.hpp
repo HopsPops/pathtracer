@@ -1,6 +1,6 @@
 #pragma once
 #include <iostream>
-#include "types.hpp"
+#include "math.hpp"
 
 class Config {
 	public:
@@ -9,9 +9,9 @@ class Config {
 		unsigned int k = 0;
 		unsigned int xres = 800;
 		unsigned int yres = 600;
-		Vec3 viewPoint = Vec3(0.0f, 0.0f, 0.0f);
-		Vec3 lookAt = Vec3(0.0f, 0.0f, 1.0f);
-		Vec3 up = Vec3(0.0f, 1.0f, 0.0f);
+		Vector3 viewPoint = Vector3(0.0f, 0.0f, 0.0f);
+		Vector3 lookAt = Vector3(0.0f, 0.0f, 1.0f);
+		Vector3 up = Vector3(0.0f, 1.0f, 0.0f);
 		float yview;
 
 		void print(std::ostream& stream) {

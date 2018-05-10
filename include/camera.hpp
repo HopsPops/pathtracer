@@ -1,57 +1,52 @@
 #pragma once
-
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/euler_angles.hpp>
-
-#include "types.hpp"
+#include "math.hpp"
 
 class Camera {
 	private:
-		double fov = glm::radians(60.0f);
+		double fov = toRadians(60.0f);
 		double pitch = 0.0f, yaw = 0.0f, roll = 0.0f;
 		double farPlane = 1000.0f, nearPlane = 0.1f;
-		Vec3 position = Vec3(0.0f, 0.0f, -1.0f);
-		Vec3 up = Vec3(0.0f, 1.0f, 0.0f);
+		Vector3 position = Vector3(0.0f, 0.0f, -1.0f);
+		Vector3 up = Vector3(0.0f, 1.0f, 0.0f);
 
 	public:
 		Camera() {
 
 		}
 
-		Mat4 perspective(double aspectRatio) const {
-			return glm::perspective(fov, aspectRatio, nearPlane, farPlane);
+		Matrix4x4 perspective(double aspectRatio) const {
+			return Matrix4x4::projection(fov, aspectRatio, nearPlane, farPlane);
 		}
 
-		Vec3 getFront() const {
-			Vec3 front = Vec3(0.0f, 0.0f, -1.0f);
+		Vector3 getFront() const {
+			Vector3 front = Vector3(0.0f, 0.0f, -1.0f);
 
-			Mat4 rotation = glm::eulerAngleXY(pitch, yaw);
-			front = rotation * Vec4(front, 0.0f);
-			glm::normalize(front);
+			Matrix4x4 rotation = Matrix4x4::rotationMatrixXYZ(pitch, yaw, 0);
+			front = (Vector3) Matrix4x4::multiply(rotation, front, 0.0f);
+			front.normalize();
 
 			return front;
 		}
 
-		Vec3 getPosition() const {
+		Vector3 getPosition() const {
 			return position;
 		}
 
-		void setPosition(Vec3 v) {
+		void setPosition(Vector3 v) {
 			position = v;
 		}
 
 		//TODO
-		void lookAt(Vec3 v) {
+		void lookAt(Vector3 v) {
 
 		}
 
-		void setUp(Vec3 v) {
+		void setUp(Vector3 v) {
 			up = v;
 		}
 
-		glm::mat4x4 view() const {
-			return glm::lookAt(position, position + getFront(), up);
+		Matrix4x4 view() const {
+			return Matrix4x4::lookAt(position, position + getFront(), up);
 		}
 
 };

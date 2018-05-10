@@ -1,14 +1,3 @@
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/mat4x4.hpp>
-#include <glm/mat3x3.hpp>
-#include <glm/mat2x2.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include "glm/ext.hpp"
-#include "glm/gtx/string_cast.hpp"
-
 #include "shader.hpp"
 #include "mesh.hpp"
 #include "model.hpp"
@@ -29,8 +18,6 @@
 
 #include <iostream>
 
-#include "types.hpp"
-
 #include "window.hpp"
 #include "config.hpp"
 
@@ -43,7 +30,6 @@ void raytrace(Model*);
 unique_ptr<Window> window;
 Renderer* renderer;
 OpenglModel* om;
-//bool stateChanged = true;
 float zOffset = 10.0f;
 Model* m = nullptr;
 Config config;
@@ -64,18 +50,14 @@ void scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
 	zOffset -= yoffset;
 }
 
-Vec3 multiply(Mat4 mat, Vec3 v) {
-	return Vec3(mat * Vec4(v, 1.0f));
-}
-
-Triangles modelToTriangles(Model* model, Mat4 transformation) {
+Triangles modelToTriangles(Model* model, Matrix4x4 transformation) {
 	vector<Triangle> triangles { };
 	for (Mesh mesh : model->meshes) {
 		for (unsigned int i = 0; i < mesh.indices.size();) {
 			Triangle triangle;
-			triangle.v1 = {multiply(transformation, mesh.positions[mesh.indices[i]]), mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
-			triangle.v2 = {multiply(transformation, mesh.positions[mesh.indices[i]]), mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
-			triangle.v3 = {multiply(transformation, mesh.positions[mesh.indices[i]]), mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
+			triangle.v1 = {Matrix4x4::multiply(transformation, mesh.positions[mesh.indices[i]], 1.0f), mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
+			triangle.v2 = {Matrix4x4::multiply(transformation, mesh.positions[mesh.indices[i]], 1.0f), mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
+			triangle.v3 = {Matrix4x4::multiply(transformation, mesh.positions[mesh.indices[i]], 1.0f), mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
 			triangles.push_back(triangle);
 		}
 	}
@@ -156,12 +138,11 @@ void windowSizeCallback(GLFWwindow* window, int width, int height) {
 	updateWindowTitle();
 }
 
+Matrix4x4 transformations() {
+	Matrix4x4 model = Matrix4x4::identityMatrix();
+	Matrix4x4 translate = Matrix4x4::translationMatrix(Vector3(-(m->bounding.getMax().x + m->bounding.getMin().x) / 2.0f, -(m->bounding.getMax().y + m->bounding.getMin().z) / 2.0f, -(m->bounding.getMax().y + m->bounding.getMin().z) / 2.0f - 3.0f - zOffset));
 
-Mat4 transformations() {
-	Mat4 model = Mat4(1.0f);
-	model = glm::translate(model, Vec3(-(m->bounding.getMax().x + m->bounding.getMin().x) / 2.0f, -(m->bounding.getMax().y + m->bounding.getMin().z) / 2.0f, -(m->bounding.getMax().y + m->bounding.getMin().z) / 2.0f - 3.0f - zOffset));
-	model = glm::rotate(model, 0.0f, Vec3 { 0.0f, 1.0f, 0.0f });
-	return model;
+	return model * translate;
 }
 
 class RaytraceStatistics {
@@ -172,38 +153,60 @@ class RaytraceStatistics {
 		RaytraceStatistics() noexcept :tests(0), intersections(0), rays(0) {};
 	};
 
-void rt(Model* model, unsigned char* data, int h, int n, RaytraceStatistics* stats) {
+void rt(Model* model, KdTree* tree, unsigned char* data, int h, int n, RaytraceStatistics* stats) {
 	const int w = window->width();
 
-	Mat4 modelMatrix = transformations();
+//	Matrix4x4 modelMatrix = transformations();
 
 	for (int y = h; y < n; y++) {
 		for (int x = 0; x < w; x++) {
 			Ray ray = Ray::createRay(camera, x, y, w, window->height(), window->aspectRatio());
 			stats->rays++;
 
-			if (!intersectAABB(ray, multiply(modelMatrix, model->bounding.getMin()), multiply(modelMatrix, model->bounding.getMax()))) {
-				continue;
-			}
+//			if (!intersectAABB(ray, Matrix4x4::multiply(modelMatrix, model->bounding.getMin(), 1.0f), Matrix4x4::multiply(modelMatrix, model->bounding.getMax(), 1.0f))) {
+//				continue;
+//			}
 
 			float depth = INFINITY;
 
-			for (Mesh &mesh : model->meshes) {
-				if (!intersectAABB(ray, multiply(modelMatrix, mesh.bounding.getMin()), multiply(modelMatrix, mesh.bounding.getMax()))) {
-					continue;
-				}
-
-				Vec3 intersection(0.0, 0.0, 0.0);
-				for (unsigned int i = 0; i < mesh.positions.size();) {
-					Vec3 v1 = multiply(modelMatrix, mesh.positions[i++]);
-					Vec3 v2 = multiply(modelMatrix, mesh.positions[i++]);
-					Vec3 v3 = multiply(modelMatrix, mesh.positions[i++]);
+			//11974873 - 128
+			//3637202 - 32
+			vector<const KdTree*> trees { };
+			traverse(ray, tree, &trees);
+			for (const KdTree* t : trees) {
+				for (Triangle triangle : t->triangles) {
+					Vector3 v1 = triangle.v1.position;
+					Vector3 v2 = triangle.v2.position;
+					Vector3 v3 = triangle.v3.position;
 
 					stats->tests++;
+					Vector3 intersection(0.0, 0.0, 0.0);
 
 					if (!intersectTriangle(ray, v1, v2, v3, intersection)) {
 						continue;
+					} else {
+						depth = 1.0f;
+						goto escape;
 					}
+				}
+			}
+
+//			for (Mesh &mesh : model->meshes) {
+//				if (!intersectAABB(ray, Matrix4x4::multiply(modelMatrix, mesh.bounding.getMin(), 1.0f), Matrix4x4::multiply(modelMatrix, mesh.bounding.getMax(), 1.0f))) {
+//					continue;
+//				}
+//
+//				Vector3 intersection(0.0, 0.0, 0.0);
+//				for (unsigned int i = 0; i < mesh.positions.size();) {
+//					Vector3 v1 = Matrix4x4::multiply(modelMatrix, mesh.positions[i++], 1.0f);
+//					Vector3 v2 = Matrix4x4::multiply(modelMatrix, mesh.positions[i++], 1.0f);
+//					Vector3 v3 = Matrix4x4::multiply(modelMatrix, mesh.positions[i++], 1.0f);
+//
+//					stats->tests++;
+//
+//					if (!intersectTriangle(ray, v1, v2, v3, intersection)) {
+//						continue;
+//					}
 
 //					double dist = glm::distance(ray.getOrigin(), intersection);
 //
@@ -211,12 +214,12 @@ void rt(Model* model, unsigned char* data, int h, int n, RaytraceStatistics* sta
 //						continue;
 //					}
 //					depth = dist;
-					depth = 1.0; //póki co i tak sprawdzamy tylko czy natrafia na obiekt wiêc nie musimy robic depth-testu
-					stats->intersections++;
-					goto escape;
-					// wychodzimy z podwójnej pêtli
-				}
-			}
+//					depth = 1.0; //póki co i tak sprawdzamy tylko czy natrafia na obiekt wiêc nie musimy robic depth-testu
+//					stats->intersections++;
+//					goto escape;
+			// wychodzimy z podwójnej pêtli
+//				}
+//			}
 			escape:
 
 			if (depth < INFINITY) {
@@ -241,11 +244,17 @@ void raytrace(Model* model) {
 	stats->tests = 0;
 	stats->intersections = 0;
 
+	KdTree tree(modelToTriangles(model, transformations()), X);
+	printf("depth %u\n", depth(&tree));
+	printf("triangles %u\n", countTriangles(&tree));
+	printf("leafs %u\n", countLeafs(&tree));
+	printf("average %lf\n", averageTrianglesPerLeaf(&tree));
+
 	for (int i = 0; i < q; i++) {
 		int from = h / q * i;
 		int to = from + h / q;
 //		cout << from << " " << to << endl;
-		threads.push_back(thread(rt, model, &data[0], from, to, stats));
+		threads.push_back(thread(rt, model, &tree, &data[0], from, to, stats));
 	}
 
 	for (auto& th : threads) {
@@ -270,21 +279,21 @@ void mouseButtonCallback(GLFWwindow* win, int button, int action, int mods) {
 	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
 //		Ray r = Ray::createRay(camera, window->cursorX(), window->cursorY(), window->width(), window->height(), window->aspectRatio());
 //		r.print(cout);
-//		Mat4 mvp = camera.view() * transformations();
+//		Matrix4x4 mvp = camera.view() * transformations();
 
-//		Vec3 v1 = multiply(mvp, m->meshes[0].vertices[0].position);
-//		Vec3 v2 = multiply(mvp, m->meshes[0].vertices[1].position);
-//		Vec3 v3 = multiply(mvp, m->meshes[0].vertices[2].position);
+//		Vector3 v1 = multiply(mvp, m->meshes[0].vertices[0].position);
+//		Vector3 v2 = multiply(mvp, m->meshes[0].vertices[1].position);
+//		Vector3 v3 = multiply(mvp, m->meshes[0].vertices[2].position);
 
 //		cout << "{{" << v1.x << ", " << v1.y << ", " << v1.z << "}, {" << v2.x << ", " << v2.y << ", " << v2.z << "}, {" << v3.x << ", " << v3.y << ", " << v3.z << "}}\n";
 //		cout << std::flush;
-//		Vec3 result();
+//		Vector3 result();
 	}
 }
 
 int main(int argc, char** argv) {
 	if (!loadConfig(config)) {
-		cout << "nie udalo sie wczytac pliku konfiguracyjnego" << endl;
+		cout << "unable to load config file\n" << endl;
 	}
 	config.print(cout);
 
@@ -306,12 +315,6 @@ int main(int argc, char** argv) {
 	m = new Model(string(config.input), true);
 	om = new OpenglModel(*m);
 
-	KdTree tree(modelToTriangles(m), X);
-	printf("depth %u\n", depth(&tree));
-	printf("triangles %u\n", countTriangles(&tree));
-	printf("leafs %u\n", countLeafs(&tree));
-	printf("average %lf\n", averageTrianglesPerLeaf(&tree));
-
 	float deltaTime = 0.0f;
 	float lastFrame = 0.0f;
 
@@ -328,7 +331,7 @@ int main(int argc, char** argv) {
 
 			if (m) {
 				renderer->draw(*om, camera, transformations());
-				renderer->drawLine(multiply(transformations(), m->bounding.getMin()), multiply(transformations(), m->bounding.getMax()), camera, Vec4(1.0f, 0.0f, 0.0f, 1.0f));
+				renderer->drawLine(Matrix4x4::multiply(transformations(), m->bounding.getMin(), 1.0f), Matrix4x4::multiply(transformations(), m->bounding.getMax(), 1.0f), camera, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
 			}
 
 			window->swapBuffers();

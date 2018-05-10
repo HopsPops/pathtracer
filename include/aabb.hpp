@@ -1,12 +1,12 @@
 #pragma once
-#include "types.hpp"
+#include "math.hpp"
 
 class AABB {
 	private:
-		Vec3 min, max;
+		Vector3 min, max;
 	public:
-		AABB(Vec3, Vec3);
+		AABB(Vector3, Vector3);
 		AABB();
-		Vec3 getMin() const;
-		Vec3 getMax() const;
+		Vector3 getMin() const;
+		Vector3 getMax() const;
 };

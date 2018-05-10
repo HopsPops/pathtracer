@@ -6,12 +6,11 @@
 #include <vector>
 #include <string>
 #include <stdio.h>
+#include "math.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -61,10 +60,10 @@ class Model {
 		}
 
 		AABB boundingBox() {
-			Vec3 minimum(100000.0f, 100000.0f, 100000.0f);
-			Vec3 maximum(-100000.0f, -100000.0f, -100000.0f);
+			Vector3 minimum(100000.0f, 100000.0f, 100000.0f);
+			Vector3 maximum(-100000.0f, -100000.0f, -100000.0f);
 			for (Mesh m : meshes) {
-				for (Vec3 v : m.positions) {
+				for (Vector3 v : m.positions) {
 					minimum.x = min(minimum.x, v.x);
 					minimum.y = min(minimum.y, v.y);
 					minimum.z = min(minimum.z, v.z);
@@ -97,45 +96,26 @@ class Model {
 		}
 
 		Mesh processMesh(aiMesh *m, const aiScene *scene) {
-//			vector<Vertex> vertices;
 			vector<unsigned int> indices;
 			vector<Texture> textures;
 
-			vector<Vec3> positions { };
-			vector<Vec2> texcoords { };
-			vector<Vec3> normals { };
+			vector<Vector3> positions { };
+			vector<Vector2> texcoords { };
+			vector<Vector3> normals { };
 
 			for (unsigned int i = 0; i < m->mNumVertices; i++) {
-//				Vertex vertex;
-//				Vec3 vector;
-
-//				vector.x = m->mVertices[i].x;
-//				vector.y = m->mVertices[i].y;
-//				vector.z = m->mVertices[i].z;
-//				vertex.position = vector;
-				positions.push_back( { m->mVertices[i].x, m->mVertices[i].y, m->mVertices[i].z });
+				positions.push_back(Vector3(m->mVertices[i].x, m->mVertices[i].y, m->mVertices[i].z));
 
 				if (m->mNormals) {
-//					vector.x = m->mNormals[i].x;
-//					vector.y = m->mNormals[i].y;
-//					vector.z = m->mNormals[i].z;
-//					vertex.normals = vector;
-					normals.push_back( { m->mNormals[i].x, m->mNormals[i].y, m->mNormals[i].z });
+					normals.push_back(Vector3(m->mNormals[i].x, m->mNormals[i].y, m->mNormals[i].z));
 				} else {
-//					vertex.normals = Vec3(0.0f, 0.0f, 0.0f);
-					normals.push_back( { 0.0f, 0.0f, 0.0f });
+					normals.push_back(Vector3());
 				}
 				if (m->mTextureCoords[0]) {
-					Vec2 vec;
-					vec.x = m->mTextureCoords[0][i].x;
-					vec.y = m->mTextureCoords[0][i].y;
-//					vertex.tex = vec;
-					texcoords.push_back( { m->mTextureCoords[0][i].x, m->mTextureCoords[0][i].y });
+					texcoords.push_back(Vector2(m->mTextureCoords[0][i].x, m->mTextureCoords[0][i].y));
 				} else {
-//					vertex.tex = Vec2(0.0f, 0.0f);
-					texcoords.push_back( { 0.0f, 0.0f });
+					texcoords.push_back(Vector2());
 				}
-//				vertices.push_back(vertex);
 			}
 			for (unsigned int i = 0; i < m->mNumFaces; i++) {
 				aiFace face = m->mFaces[i];
@@ -157,9 +137,6 @@ class Model {
 			std::vector<Texture> heightMaps = loadMaterialTextures(material, aiTextureType_AMBIENT, "texture_height");
 			textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
 			Mesh mesh(positions, texcoords, normals, indices, textures);
-//			mesh.positions = positions;
-//			mesh.texcoords = texcoords;
-//			mesh.normals = normals;
 
 			return mesh;
 		}
