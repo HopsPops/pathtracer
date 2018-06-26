@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <cmath>
+#include <iostream>
 
 #define M_PI 3.14159265358979323846
 
@@ -22,18 +23,27 @@ class Vector3 {
 		float y = 0.0f;
 		float z = 0.0f;
 		Vector3& normalize(); //return this
-		float length();
+		Vector3& negate();
+		Vector3& scale(float);
+		float length() const;
 
 		Vector3() {};
 		Vector3(float x, float y, float z) : x(x), y(y), z(z) {};
 		static float dot(Vector3, Vector3);
 		static Vector3 cross(Vector3, Vector3);
+		static float distance(Vector3, Vector3);
 		Vector3 operator-(Vector3) const;
 		Vector3 operator+(Vector3) const;
-		Vector3 operator*(float factor); //return this
+		float operator [](int i) const;
+		Vector3 copy() const;
 
 		const Vector3 operator=(const Vector3&);
+		bool isZero() const;
+		friend std::ostream& operator<<(std::ostream&, const Vector3&);
 };
+
+Vector3 operator*(float, Vector3); //return this
+Vector3 operator*(Vector3, float); //return this
 
 class Vector4 {
 	public:
@@ -73,6 +83,7 @@ class Matrix4x4 {
 
 		float det();
 		Matrix4x4 inverse();
+		Matrix4x4 transpose();
 		void scale(float factor);
 
 		std::array<float, 16> getData();

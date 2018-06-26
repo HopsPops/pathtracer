@@ -1,26 +1,12 @@
 #pragma once
 
 #include <aabb.hpp>
+#include <math.hpp>
 #include <algorithm>
 #include <string>
 #include <vector>
-#include "math.hpp"
 
 using namespace std;
-
-struct Vertex {
-		Vector3 position;
-		Vector3 normals;
-		Vector2 tex;
-};
-
-class Triangle {
-	public:
-		Vertex v1;
-		Vertex v2;
-		Vertex v3;
-
-};
 
 struct Texture {
 		unsigned int id;

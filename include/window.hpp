@@ -18,10 +18,14 @@ class Window {
 		void pollEvents();
 		bool shouldClose();
 
+		bool isMouseLeftButtonPressed();
+		bool isButtonPressed(int);
+
 		double aspectRatio();
 
 		double cursorX();
 		double cursorY();
+		void setCursorPosition(double x, double y);
 
 		void setFramebufferSizeCallback(GLFWframebuffersizefun);
 		void setScrollCallback(GLFWscrollfun);
@@ -29,6 +33,7 @@ class Window {
 		void setKeyCallback(GLFWkeyfun);
 		void setMouseButtonCallback(GLFWmousebuttonfun);
 		void setWindowSizeCallback(GLFWwindowsizefun);
+		void setCursorCallback(GLFWcursorposfun);
 
 };
 

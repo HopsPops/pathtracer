@@ -1,225 +1,60 @@
 #pragma once
-#include "aabb.hpp"
-#include "mesh.hpp"
-#include "ray.hpp"
-#include "intersection.hpp"
-#include <vector>
+
+#include <aabb.hpp>
+#include <intersection.hpp>
+#include <math.hpp>
+#include <ray.hpp>
+#include <triangle.hpp>
+#include <vertex.hpp>
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
 #include <tuple>
-#include <stdio.h>
-#include "math.hpp"
+#include <vector>
 
 enum Axis {
 	X = 0, Y = 1, Z = 2
 };
 
-typedef std::vector<Triangle> Triangles;
-
-class Modular {
-	private:
-		int state = 0;
-		unsigned int modulus = 1;
-
-	public:
-		Modular(int digit, unsigned int modulus) {
-			this->state = digit % modulus;
-			this->modulus = modulus;
-		}
-
-//		Modular
-
-		Modular& operator++() {
-			state = (state + 1) % modulus;
-			return *this;
-		}
-
-//		Modular& operator++(int) {
-//			int old = state;
-//			state = (state + 1) % modulus;
-//			return *this;
-//		}
-
-		Modular operator+(int d) {
-			Modular result((this->state + d) % modulus, modulus);
-			return result;
-		}
-
-		operator int() const {
-			return state;
-		}
-};
-
-Vector3 triagnlesMedian(Triangles trigs) {
-	Vector3 median { 0.0f, 0.0f, 0.0f };
-	for (Triangle t : trigs) {
-		median.x += t.v1.position.x / (float) trigs.size() / 3.0;
-		median.y += t.v1.position.y / (float) trigs.size() / 3.0;
-		median.z += t.v1.position.z / (float) trigs.size() / 3.0;
-
-		median.x += t.v2.position.x / (float) trigs.size() / 3.0;
-		median.y += t.v2.position.y / (float) trigs.size() / 3.0;
-		median.z += t.v2.position.z / (float) trigs.size() / 3.0;
-
-		median.x += t.v2.position.x / (float) trigs.size() / 3.0;
-		median.y += t.v2.position.y / (float) trigs.size() / 3.0;
-		median.z += t.v2.position.z / (float) trigs.size() / 3.0;
-	}
-	return median;
-}
-
-std::tuple<Triangles, Triangles> partitionX(Triangles triangles, Vector3 separator) {
+std::tuple<Triangles, Triangles> partitionAxis(const Triangles& triangles, Axis axis, double separator) {
 	Triangles left;
 	Triangles right;
 	for (Triangle t : triangles) {
-		bool pushLeft = false;
-		bool pushRight = false;
-		if (t.v1.position.x < separator.x) {
-			pushLeft = true;
-		} else {
-			pushRight = true;
-		}
-		if (t.v2.position.x < separator.x) {
-			pushLeft = true;
-		} else {
-			pushRight = true;
-		}
-		if (t.v3.position.x < separator.x) {
-			pushLeft = true;
-		} else {
-			pushRight = true;
-		}
-		if (pushLeft) {
+		if (t.v1.position[axis] <= separator || t.v2.position[axis] <= separator || t.v3.position[axis] <= separator) {
 			left.push_back(t);
 		}
-		if (pushRight) {
-			right.push_back(t);
-		}
-	}
-	return std::make_tuple(left, right);
-}
-std::tuple<Triangles, Triangles> partitionY(Triangles triangles, Vector3 separator) {
-	Triangles left;
-	Triangles right;
-	for (Triangle t : triangles) {
-		bool pushLeft = false;
-		bool pushRight = false;
-		if (t.v1.position.y < separator.y) {
-			pushLeft = true;
-		} else {
-			pushRight = true;
-		}
-		if (t.v2.position.y < separator.y) {
-			pushLeft = true;
-		} else {
-			pushRight = true;
-		}
-		if (t.v3.position.y < separator.y) {
-			pushLeft = true;
-		} else {
-			pushRight = true;
-		}
-		if (pushLeft) {
-			left.push_back(t);
-		}
-		if (pushRight) {
-			right.push_back(t);
-		}
-	}
-	return std::make_tuple(left, right);
-}
-std::tuple<Triangles, Triangles> partitionZ(Triangles triangles, Vector3 separator) {
-	Triangles left;
-	Triangles right;
-	for (Triangle t : triangles) {
-		bool pushLeft = false;
-		bool pushRight = false;
-		if (t.v1.position.z < separator.z) {
-			pushLeft = true;
-		} else {
-			pushRight = true;
-		}
-		if (t.v2.position.z < separator.z) {
-			pushLeft = true;
-		} else {
-			pushRight = true;
-		}
-		if (t.v3.position.z < separator.z) {
-			pushLeft = true;
-		} else {
-			pushRight = true;
-		}
-		if (pushLeft) {
-			left.push_back(t);
-		}
-		if (pushRight) {
+		if (t.v1.position[axis] >= separator || t.v2.position[axis] >= separator || t.v3.position[axis] >= separator) {
 			right.push_back(t);
 		}
 	}
 	return std::make_tuple(left, right);
 }
 
-std::tuple<Triangles, Triangles> partition(Triangles triangles, Vector3 separator, Modular axis) {
-	if (axis == X) {
-		return partitionX(triangles, separator);
-	} else if (axis == Y) {
-		return partitionY(triangles, separator);
-	} else if (axis == Z) {
-		return partitionZ(triangles, separator);
-	} else {
-		throw std::invalid_argument("wrong enum");
-	}
-}
-
-AABB trianglesAABB(Triangles triangles) {
-	Vector3 minimum(100000.0f, 100000.0f, 100000.0f);
-	Vector3 maximum(-100000.0f, -100000.0f, -100000.0f);
-	for (Triangle t : triangles) {
-		minimum.x = min(minimum.x, t.v1.position.x);
-		minimum.y = min(minimum.y, t.v1.position.y);
-		minimum.z = min(minimum.z, t.v1.position.z);
-		maximum.x = max(maximum.x, t.v1.position.x);
-		maximum.y = max(maximum.y, t.v1.position.y);
-		maximum.z = max(maximum.z, t.v1.position.z);
-
-		minimum.x = min(minimum.x, t.v2.position.x);
-		minimum.y = min(minimum.y, t.v2.position.y);
-		minimum.z = min(minimum.z, t.v2.position.z);
-		maximum.x = max(maximum.x, t.v2.position.x);
-		maximum.y = max(maximum.y, t.v2.position.y);
-		maximum.z = max(maximum.z, t.v2.position.z);
-
-		minimum.x = min(minimum.x, t.v3.position.x);
-		minimum.y = min(minimum.y, t.v3.position.y);
-		minimum.z = min(minimum.z, t.v3.position.z);
-		maximum.x = max(maximum.x, t.v3.position.x);
-		maximum.y = max(maximum.y, t.v3.position.y);
-		maximum.z = max(maximum.z, t.v3.position.z);
-	}
-	return AABB(minimum, maximum);
+std::tuple<Triangles, Triangles> partition(const Triangles& triangles, Axis axis) {
+	return partitionAxis(triangles, axis, trianglesMedian(triangles, (int) axis));
 }
 
 class KdTree {
 
 	public:
-		Modular axis = Modular(0, 3);
+		Axis axis = X;
 		KdTree* left = nullptr;
 		KdTree* right = nullptr;
 		AABB aabb;
 		std::vector<Triangle> triangles { };
 
-		KdTree(Triangles triangles, Axis axis) {
-			this->axis = Modular(axis, 3);
-			this->aabb = trianglesAABB(triangles);
-			if (triangles.size() > 32) {
-//				printf("splitting %d\n", triangles.size());
-				Vector3 median = triagnlesMedian(triangles);
-				std::tuple<Triangles, Triangles> splited = partition(triangles, median, this->axis);
-//				printf("left %d\n", std::get<0>(splited).size());
-//				printf("right %d\n", std::get<1>(splited).size());
+		KdTree(Triangles& triangles, Axis axis) {
+			this->axis = axis;
+			this->aabb = AABB(triangles);
+//			Vector3 v = this->aabb.maximum - this->aabb.minimum;
+//			this->aabb.maximum = this->aabb.maximum + (0.1 * v);
+//			this->aabb.minimum = this->aabb.minimum - (0.1 * v);
+			if (triangles.size() > 256) {
+				std::tuple<Triangles, Triangles> splited = partition(triangles, this->axis);
 
-				this->left = new KdTree(std::get<0>(splited), static_cast<Axis>((int) (this->axis + 1)));
-				this->right = new KdTree(std::get<1>(splited), static_cast<Axis>((int) (this->axis + 1)));
+				this->left = new KdTree(std::get<0>(splited), static_cast<Axis>((this->axis + 1) % 3));
+				this->right = new KdTree(std::get<1>(splited), static_cast<Axis>((this->axis + 1) % 3));
 			} else {
-//				printf("done %d\n", triangles.size());
 				this->triangles = triangles;
 			}
 		}
@@ -227,10 +62,6 @@ class KdTree {
 		bool isLeaf() const {
 			return left == nullptr || right == nullptr;
 		}
-
-//	void add(std::vector<Triangle> trigs) {
-//
-//	}
 
 };
 
@@ -277,14 +108,46 @@ void traverse(const Ray& ray, const KdTree* tree, vector<const KdTree*>* result)
 	}
 }
 
+bool find(const KdTree* tree, const Ray& ray, const Triangle* origin, Triangle* result, float* d, Vector3& intersectionOut, vector<AABB>* intersectedAABB) {
+	if (intersectAABB(ray, tree->aabb)) {
+		if (tree->isLeaf()) {
 
+			if (intersectedAABB) {
+				intersectedAABB->push_back(tree->aabb);
+			}
 
+			bool found = false;
+			for (Triangle triangle : tree->triangles) {
+				if (origin && (origin->id == triangle.id)) {
+					continue;
+				}
 
+				Vector3 intersection(0.0, 0.0, 0.0);
+				if (!intersectTriangle(ray, triangle, intersection)) {
+					continue;
+				}
 
+				float dist = Vector3::distance(ray.getOrigin(), intersection);
 
+				if (dist < *d) {
+					intersectionOut = intersection;
+					*result = triangle;
+					*d = dist;
+					found = true;
+				}
+			}
+			return found;
+		} else {
+			return find(tree->left, ray, origin, result, d, intersectionOut, intersectedAABB) ||
+					find(tree->right, ray, origin, result, d, intersectionOut, intersectedAABB);
+		}
+	} else {
+		return false;
+	}
+}
 
-
-
-
-
+bool find(const KdTree* tree, const Ray& ray, const Triangle* origin, Triangle* result, Vector3& intersectionOut) {
+	float d = INFINITY;
+	return find(tree, ray, origin, result, &d, intersectionOut, nullptr);
+}
 

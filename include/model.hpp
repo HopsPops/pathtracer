@@ -1,6 +1,6 @@
 #pragma once
 
-#include <mesh.hpp>
+#include "mesh.hpp"
 #include <shader.hpp>
 #include "aabb.hpp"
 #include <vector>
@@ -25,8 +25,7 @@ class Model {
 		bool gammaCorrection;
 		AABB bounding;
 
-		Model(string const &path, bool gamma = false) :
-				gammaCorrection(gamma) {
+		Model(string const &path, bool gamma = false) : gammaCorrection(gamma) {
 			loadModel(path);
 		}
 
@@ -52,7 +51,7 @@ class Model {
 				printf("\tmesh %d\n", i++);
 //				printf("\t\tvertices %d\n", m.vertices.size());
 				printf("\t\tpositions %d\n", m.positions.size());
-				printf("\t\normals %d\n", m.normals.size());
+				printf("\t\tnormals %d\n", m.normals.size());
 				printf("\t\ttexcoords %d\n", m.texcoords.size());
 				printf("\t\tindices %d\n", m.indices.size());
 				printf("\t\ttextures %d\n", m.textures.size());
@@ -104,15 +103,19 @@ class Model {
 			vector<Vector3> normals { };
 
 			for (unsigned int i = 0; i < m->mNumVertices; i++) {
-				positions.push_back(Vector3(m->mVertices[i].x, m->mVertices[i].y, m->mVertices[i].z));
-
+				{
+					Vector3 position { m->mVertices[i].x, m->mVertices[i].y, m->mVertices[i].z };
+					positions.push_back(position);
+				}
 				if (m->mNormals) {
-					normals.push_back(Vector3(m->mNormals[i].x, m->mNormals[i].y, m->mNormals[i].z));
+					Vector3 normal { m->mNormals[i].x, m->mNormals[i].y, m->mNormals[i].z };
+					normals.push_back(normal);
 				} else {
 					normals.push_back(Vector3());
 				}
 				if (m->mTextureCoords[0]) {
-					texcoords.push_back(Vector2(m->mTextureCoords[0][i].x, m->mTextureCoords[0][i].y));
+					Vector2 texcoord { m->mTextureCoords[0][i].x, m->mTextureCoords[0][i].y };
+					texcoords.push_back( texcoord );
 				} else {
 					texcoords.push_back(Vector2());
 				}

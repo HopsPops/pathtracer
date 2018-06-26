@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <stdio.h>
+#include "3dtree.hpp"
 
 typedef std::vector<Texture> Textures;
 
@@ -37,18 +38,15 @@ class OpenglMesh {
 			glEnableVertexAttribArray(0);
 			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vector3), (void*) 0);
 
-
 			glBindBuffer(GL_ARRAY_BUFFER, vboNormals);
 			glBufferData(GL_ARRAY_BUFFER, mesh.normals.size() * sizeof(Vector3), &mesh.normals[0], GL_STATIC_DRAW);
 			glEnableVertexAttribArray(1);
 			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vector3), (void*) 0);
 
-
 			glBindBuffer(GL_ARRAY_BUFFER, vboTexcoords);
 			glBufferData(GL_ARRAY_BUFFER, mesh.texcoords.size() * sizeof(Vector2), &mesh.texcoords[0], GL_STATIC_DRAW);
 			glEnableVertexAttribArray(2);
 			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vector2), (void*) 0);
-
 
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 			glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh.indices.size() * sizeof(unsigned int), &mesh.indices[0], GL_STATIC_DRAW);
@@ -61,9 +59,6 @@ class OpenglMesh {
 //
 //			glEnableVertexAttribArray(2);
 //			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) offsetof(Vertex, tex));
-
-
-
 
 			glBindVertexArray(0);
 
@@ -130,8 +125,11 @@ class Renderer {
 			lineShader = Shader::loadFromFile("shaders/vline.glsl", "shaders/fline.glsl");
 			defaultShader = Shader::loadFromFile(vertexPath, fragmentPath);
 
-			glEnable (GL_DEPTH_TEST);
-			glEnable (GL_MULTISAMPLE);
+			glEnable(GL_DEPTH_TEST);
+			glEnable(GL_MULTISAMPLE);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			glEnable(GL_BLEND);
+//			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 //			glLineWidth(3);
 
 			unsigned int vao = 0;
@@ -144,11 +142,11 @@ class Renderer {
 		}
 
 		void clearColorBuffer() {
-			glClear (GL_COLOR_BUFFER_BIT);
+			glClear(GL_COLOR_BUFFER_BIT);
 		}
 
 		void clearDepthBuffer() {
-			glClear (GL_DEPTH_BUFFER_BIT);
+			glClear(GL_DEPTH_BUFFER_BIT);
 		}
 
 		bool isMsaa() const {
@@ -185,9 +183,9 @@ class Renderer {
 		void toggleMsaa() {
 			msaa = !msaa;
 			if (msaa) {
-				glEnable (GL_MULTISAMPLE);
+				glEnable(GL_MULTISAMPLE);
 			} else {
-				glDisable (GL_MULTISAMPLE);
+				glDisable(GL_MULTISAMPLE);
 			}
 		}
 
@@ -266,7 +264,7 @@ class Renderer {
 			glDrawElements(GL_TRIANGLES, m.getIndices(), GL_UNSIGNED_INT, 0);
 			glBindVertexArray(0);
 
-			glActiveTexture (GL_TEXTURE0);
+			glActiveTexture(GL_TEXTURE0);
 		}
 
 		void draw(const OpenglMesh& m, const Camera& camera, const Matrix4x4& model) {
@@ -294,6 +292,65 @@ class Renderer {
 			for (unsigned int i = 0; i < m.getMeshes().size(); i++) {
 				draw(m.getMeshes()[i], camera, model);
 			}
+		}
+
+		void drawKdTree(const KdTree* tree, const Camera& camera) {
+			glLineWidth(1);
+			int d = depth(tree);
+			drawKdTree(tree, camera, 0, d);
+			glLineWidth(3);
+		}
+
+		void drawKdTree(const KdTree* tree, const Camera& camera, int level, int depth) {
+			if (tree == nullptr) {
+				return;
+			}
+			if (tree->isLeaf()) {
+				if (tree->axis == X) {
+					drawAABB(tree->aabb, camera, Vector4 { 1.0f, 0.0f, 0.0f, 1.0f - (float) (level / 1.5f / (float) depth) });
+				} else if (tree->axis == Y) {
+					drawAABB(tree->aabb, camera, Vector4 { 0.0f, 1.0f, 0.0f, 1.0f - (float) (level / 1.5f / (float) depth) });
+				} else {
+					drawAABB(tree->aabb, camera, Vector4 { 0.0f, 0.0f, 1.0f, 1.0f - (float) (level / 1.5f / (float) depth) });
+				}
+			}
+			drawKdTree(tree->left, camera, level + 1, depth);
+			drawKdTree(tree->right, camera, level + 1, depth);
+		}
+
+		void drawAABB(const AABB& aabb, const Camera& camera, Vector4 color) {
+
+			Vector3 leftBottomDown = aabb.getMin();
+			Vector3 leftTopDown(aabb.getMin().x, aabb.getMin().y, aabb.getMax().z);
+			Vector3 rightBottomDown(aabb.getMax().x, aabb.getMin().y, aabb.getMin().z);
+			Vector3 rightTopDown(aabb.getMax().x, aabb.getMin().y, aabb.getMax().z);
+
+			Vector3 leftBottomUp = leftBottomDown.copy();
+			Vector3 leftTopUp = leftTopDown.copy();
+			Vector3 rightBottomUp = rightBottomDown.copy();
+			Vector3 rightTopUp = rightTopDown.copy();
+			leftBottomUp.y = aabb.getMax().y;
+			leftTopUp.y = aabb.getMax().y;
+			rightBottomUp.y = aabb.getMax().y;
+			rightTopUp.y = aabb.getMax().y;
+
+			// down
+			drawLine(leftBottomDown, rightBottomDown, camera, color);
+			drawLine(rightBottomDown, rightTopDown, camera, color);
+			drawLine(rightTopDown, leftTopDown, camera, color);
+			drawLine(leftTopDown, leftBottomDown, camera, color);
+
+			// up
+			drawLine(leftBottomUp, rightBottomUp, camera, color);
+			drawLine(rightBottomUp, rightTopUp, camera, color);
+			drawLine(rightTopUp, leftTopUp, camera, color);
+			drawLine(leftTopUp, leftBottomUp, camera, color);
+
+			// sides
+			drawLine(leftBottomDown, leftBottomUp, camera, color);
+			drawLine(leftTopDown, leftTopUp, camera, color);
+			drawLine(rightBottomDown, rightBottomUp, camera, color);
+			drawLine(rightTopDown, rightTopUp, camera, color);
 		}
 
 };
