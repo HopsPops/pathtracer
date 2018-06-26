@@ -99,6 +99,9 @@ void Window::setWindowSizeCallback(GLFWwindowsizefun f) {
 	glfwSetWindowSizeCallback(handle, f);
 }
 
+void Window::setCursorCallback(GLFWcursorposfun f) {
+	glfwSetCursorPosCallback(handle, f);
+}
 double Window::cursorX() {
 	double xpos = 0, ypos = 0;
 	glfwGetCursorPos(handle, &xpos, &ypos);
@@ -109,4 +112,19 @@ double Window::cursorY() {
 	double xpos = 0, ypos = 0;
 	glfwGetCursorPos(handle, &xpos, &ypos);
 	return ypos;
+}
+
+bool Window::isMouseLeftButtonPressed() {
+	int state = glfwGetMouseButton(handle, GLFW_MOUSE_BUTTON_LEFT);
+	return state == GLFW_PRESS;
+
+}
+
+bool Window::isButtonPressed(int key) {
+	int state = glfwGetKey(handle, key);
+	return state == GLFW_PRESS;
+}
+
+void Window::setCursorPosition(double x, double y) {
+	glfwSetCursorPos(handle, x, y);
 }

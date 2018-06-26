@@ -221,7 +221,7 @@ Vector3& Vector3::normalize() {
 	return *this;
 }
 
-float Vector3::length() {
+float Vector3::length() const {
 	return sqrt(x * x + y * y + z * z);
 }
 
@@ -241,12 +241,29 @@ Vector3 Vector3::operator +(Vector3 v) const {
 	return Vector3(x + v.x, y + v.y, z + v.z);
 }
 
-Vector3 Vector3::operator *(float factor) {
-	return Vector3(x * factor, y * factor, z * factor);
-}
-
 const std::array<float, 16> Matrix4x4::getData() const {
 	return data;
+}
+
+Matrix4x4 Matrix4x4::transpose() {
+	Matrix4x4 result = Matrix4x4::zeroMatrix();
+	result.data[0] = data[0];
+	result.data[1] = data[4];
+	result.data[2] = data[8];
+	result.data[3] = data[12];
+	result.data[4] = data[1];
+	result.data[5] = data[5];
+	result.data[6] = data[9];
+	result.data[7] = data[13];
+	result.data[8] = data[2];
+	result.data[9] = data[6];
+	result.data[10] = data[10];
+	result.data[11] = data[14];
+	result.data[12] = data[3];
+	result.data[13] = data[7];
+	result.data[14] = data[11];
+	result.data[15] = data[15];
+	return result;
 }
 
 Vector4 Matrix4x4::operator *(const Vector4& v) {
@@ -272,3 +289,54 @@ Vector4::operator Vector3() const {
 	return Vector3(x, y, z);
 }
 
+float Vector3::distance(Vector3 v1, Vector3 v2) {
+	Vector3 sub = v1 - v2;
+	return sub.length();
+}
+
+Vector3& Vector3::negate() {
+	x = -x;
+	y = -y;
+	z = -z;
+	return *this;
+}
+
+Vector3 operator *(float factor, Vector3 vector) {
+	return Vector3(vector.x * factor, vector.y * factor, vector.z * factor);
+}
+
+Vector3 operator *(Vector3 vector, float factor) {
+	return Vector3(vector.x * factor, vector.y * factor, vector.z * factor);
+}
+
+bool Vector3::isZero() const {
+	return x == 0.0f && y == 0.0f && z == 0.0f;
+}
+
+float Vector3::operator [](int i) const {
+	if (i == 0) {
+		return x;
+	} else if (i == 1) {
+		return y;
+	} else if (i == 2) {
+		return z;
+	} else {
+		throw std::invalid_argument("i > 2");
+	}
+}
+
+std::ostream& operator<<(std::ostream &stream, const Vector3& vec) {
+	stream << "{ " << vec.x << ", " << vec.y << ", " << vec.z << " }";
+	return stream;
+}
+
+Vector3 Vector3::copy() const {
+	return Vector3(x, y, z);
+}
+
+Vector3& Vector3::scale(float factor) {
+	x *= factor;
+	y *= factor;
+	z *= factor;
+	return *this;
+}
