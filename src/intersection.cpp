@@ -3,6 +3,7 @@
 #include <vertex.hpp>
 #include <ray.hpp>
 
+
 //bool intersectTriangle(const Ray& ray, Vector3 v1, Vector3 v2, Vector3 v3, Vector3& outIntersectionPoint) {
 //	float x1 = v1.x;
 //	float y1 = v1.y;
@@ -67,7 +68,7 @@
 //	return true;
 //}
 
-bool intersectTriangle(const Ray& ray, Vector3 vertex0, Vector3 vertex1, Vector3 vertex2, Vector3& outIntersectionPoint) {
+std::unique_ptr<Vector3> intersectTriangle(const Ray& ray, const Vector3& vertex0, const Vector3& vertex1, const Vector3& vertex2) {
 	const double EPSILON = 0.00000000000001;
 
 	Vector3 rayVector = ray.getDirection();
@@ -75,7 +76,7 @@ bool intersectTriangle(const Ray& ray, Vector3 vertex0, Vector3 vertex1, Vector3
 
 	Vector3 edge1, edge2, h, s, q;
 
-	float a, f, u, v;
+	double a = 0.0, f = 0.0, u = 0.0, v = 0.0;
 	edge1 = vertex1 - vertex0;
 	edge2 = vertex2 - vertex0;
 
@@ -83,40 +84,42 @@ bool intersectTriangle(const Ray& ray, Vector3 vertex0, Vector3 vertex1, Vector3
 	a = Vector3::dot(edge1, h);
 
 	if (a > -EPSILON && a < EPSILON) {
-		return false;
+		return std::unique_ptr<Vector3>(nullptr);
 	}
 	f = 1.0 / a;
 	s = rayOrigin - vertex0;
 	u = f * Vector3::dot(s, h);
 
 	if (u < 0.0 || u > 1.0) {
-		return false;
+		return std::unique_ptr<Vector3>(nullptr);
 	}
 
 	q = Vector3::cross(s, edge1);
 	v = f * Vector3::dot(rayVector, q);
 
 	if (v < 0.0 || u + v > 1.0) {
-		return false;
+		return std::unique_ptr<Vector3>(nullptr);
 	}
-	float t = f * Vector3::dot(edge2, q);
+	double t = f * Vector3::dot(edge2, q);
 	if (t > EPSILON) {
-		outIntersectionPoint = rayOrigin + rayVector * t;
-		return true;
+//		outIntersectionPoint = rayOrigin + rayVector * t;
+		Vector3* result = new Vector3;
+		*result = rayOrigin + rayVector * t;
+		return std::unique_ptr<Vector3>(result);
 	} else {
-		return false;
+		return std::unique_ptr<Vector3>(nullptr);
 	}
 }
 
-bool intersectTriangle(const Ray& ray, const Triangle& t, Vector3& outIntersectionPoint) {
-	return intersectTriangle(ray, t.v1.position, t.v2.position, t.v3.position, outIntersectionPoint);
+std::unique_ptr<Vector3> intersectTriangle(const Ray& ray, const Triangle& t) {
+	return intersectTriangle(ray, t.v1.position, t.v2.position, t.v3.position);
 }
 
-bool intersectAABB(const Ray& ray, Vector3 min, Vector3 max) {
+bool intersectAABB(const Ray& ray, const Vector3& min, const Vector3& max) {
 
-	float originX = ray.getOrigin().x;
-	float originY = ray.getOrigin().y;
-	float originZ = ray.getOrigin().z;
+	double originX = ray.getOrigin().x;
+	double originY = ray.getOrigin().y;
+	double originZ = ray.getOrigin().z;
 
 	if (originX <= max.x &&
 			originX >= min.x &&
@@ -127,8 +130,8 @@ bool intersectAABB(const Ray& ray, Vector3 min, Vector3 max) {
 		return true;
 	}
 
-	float txmin = (min.x - ray.getOrigin().x) / ray.getDirection().x;
-	float txmax = (max.x - ray.getOrigin().x) / ray.getDirection().x;
+	double txmin = (min.x - ray.getOrigin().x) / ray.getDirection().x;
+	double txmax = (max.x - ray.getOrigin().x) / ray.getDirection().x;
 
 	if (txmin > txmax) {
 		float temp = txmin;
@@ -136,8 +139,8 @@ bool intersectAABB(const Ray& ray, Vector3 min, Vector3 max) {
 		txmax = temp;
 	}
 
-	float tymin = (min.y - ray.getOrigin().y) / ray.getDirection().y;
-	float tymax = (max.y - ray.getOrigin().y) / ray.getDirection().y;
+	double tymin = (min.y - ray.getOrigin().y) / ray.getDirection().y;
+	double tymax = (max.y - ray.getOrigin().y) / ray.getDirection().y;
 
 	if (tymin > tymax) {
 		float temp = tymin;
@@ -156,8 +159,8 @@ bool intersectAABB(const Ray& ray, Vector3 min, Vector3 max) {
 		txmax = tymax;
 	}
 
-	float tzmin = (min.z - ray.getOrigin().z) / ray.getDirection().z;
-	float tzmax = (max.z - ray.getOrigin().z) / ray.getDirection().z;
+	double tzmin = (min.z - ray.getOrigin().z) / ray.getDirection().z;
+	double tzmax = (max.z - ray.getOrigin().z) / ray.getDirection().z;
 
 	if (tzmin > tzmax) {
 		float temp = tzmin;

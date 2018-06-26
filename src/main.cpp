@@ -61,13 +61,13 @@ Triangles* modelToTriangles(Model* model, Matrix4x4 transformation) {
 	Triangles* triangles = new Triangles;
 //	Matrix4x4 transposeInverse = transformation.inverse().transpose();
 	unsigned int id = 0;
-	for (Mesh& mesh : model->meshes) {
+	for (const Mesh& mesh : model->meshes) {
 		for (unsigned int i = 0; i < mesh.indices.size();) {
-			Triangle triangle;
-			triangle.id = id++;
-			triangle.v1 = {mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
-			triangle.v2 = {mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
-			triangle.v3 = {mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
+			Triangle* triangle = new Triangle;
+			triangle->id = id++;
+			triangle->v1 = {mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
+			triangle->v2 = {mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
+			triangle->v3 = {mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
 //			triangle.v1 = {Matrix4x4::multiply(transformation, mesh.positions[mesh.indices[i]], 1.0f), mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
 //			triangle.v2 = {Matrix4x4::multiply(transformation, mesh.positions[mesh.indices[i]], 1.0f), mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
 //			triangle.v3 = {Matrix4x4::multiply(transformation, mesh.positions[mesh.indices[i]], 1.0f), mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
@@ -188,41 +188,41 @@ void rt(Model* model, KdTree* tree, unsigned char* data, int h, int n, RaytraceS
 
 	for (int y = h; y < n; y++) {
 		for (int x = 0; x < w; x++) {
-			Ray ray = Ray::createRay(camera, x, y, w, window->height(), window->aspectRatio());
-			stats->rays++;
+//			Ray ray = Ray::createRay(camera, x, y, w, window->height(), window->aspectRatio());
+//			stats->rays++;
 
 //			if (!intersectAABB(ray, Matrix4x4::multiply(modelMatrix, model->bounding.getMin(), 1.0f), Matrix4x4::multiply(modelMatrix, model->bounding.getMax(), 1.0f))) {
 //				continue;
 //			}
 
-			float depth = INFINITY;
-
-			vector<const KdTree*> trees { };
-			traverse(ray, tree, &trees);
-			for (const KdTree* t : trees) {
-				for (Triangle triangle : t->triangles) {
-					Vector3 v1 = triangle.v1.position;
-					Vector3 v2 = triangle.v2.position;
-					Vector3 v3 = triangle.v3.position;
-
-					stats->tests++;
-					Vector3 intersection(0.0, 0.0, 0.0);
-
-					if (!intersectTriangle(ray, v1, v2, v3, intersection)) {
-						continue;
-					} else {
-						depth = 1.0f;
-						goto escape;
-					}
-				}
-			}
-
-			escape:
-			if (depth < INFINITY) {
-				data[(x + y * w) * 3 + 0] = 255;
-				data[(x + y * w) * 3 + 1] = 0;
-				data[(x + y * w) * 3 + 2] = 0;
-			}
+//			float depth = INFINITY;
+//
+//			vector<const KdTree*> trees { };
+//			traverse(ray, tree, &trees);
+//			for (const KdTree* t : trees) {
+//				for (const Triangle* triangle : t->triangles) {
+//					Vector3 v1 = triangle->v1.position;
+//					Vector3 v2 = triangle->v2.position;
+//					Vector3 v3 = triangle->v3.position;
+//
+//					stats->tests++;
+//					Vector3 intersection(0.0, 0.0, 0.0);
+//
+//					if (!intersectTriangle(ray, v1, v2, v3, intersection)) {
+//						continue;
+//					} else {
+//						depth = 1.0f;
+//						goto escape;
+//					}
+//				}
+//			}
+//
+//			escape:
+//			if (depth < INFINITY) {
+//				data[(x + y * w) * 3 + 0] = 255;
+//				data[(x + y * w) * 3 + 1] = 0;
+//				data[(x + y * w) * 3 + 2] = 0;
+//			}
 		}
 //		cout << " " << y << endl;
 	}
@@ -379,7 +379,7 @@ int main(int argc, char** argv) {
 			}
 			if (m) {
 				renderer->draw(*om, camera, transformations());
-				renderer->drawKdTree(kdTree, camera);
+//				renderer->drawKdTree(kdTree, camera);
 //				renderer->drawLine(Matrix4x4::multiply(transformations(), m->bounding.getMin(), 1.0f), Matrix4x4::multiply(transformations(), m->bounding.getMax(), 1.0f), camera, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
 
 //				glLineWidth(0.5);
@@ -391,7 +391,8 @@ int main(int argc, char** argv) {
 //				glLineWidth(3);
 
 				for (Line& line : lines) {
-					line.progress += 0.05f;
+					line.progress = 1.0f;
+//					line.progress += 0.05f;
 					if (line.progress > 1.0f) line.progress = 1.0f;
 					renderer->drawLine(line.v1, line.v1 + (line.progress * (line.v2 - line.v1)), camera, Vector4(1.0f, 1.0f, 0.0f, 1.0f));
 					if (line.progress < 1.0f) {

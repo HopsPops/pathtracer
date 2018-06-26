@@ -19,11 +19,11 @@ enum Axis {
 std::tuple<Triangles, Triangles> partitionAxis(const Triangles& triangles, Axis axis, double separator) {
 	Triangles left;
 	Triangles right;
-	for (Triangle t : triangles) {
-		if (t.v1.position[axis] <= separator || t.v2.position[axis] <= separator || t.v3.position[axis] <= separator) {
+	for (const Triangle* t : triangles) {
+		if (t->v1.position[axis] <= separator || t->v2.position[axis] <= separator || t->v3.position[axis] <= separator) {
 			left.push_back(t);
 		}
-		if (t.v1.position[axis] >= separator || t.v2.position[axis] >= separator || t.v3.position[axis] >= separator) {
+		if (t->v1.position[axis] >= separator || t->v2.position[axis] >= separator || t->v3.position[axis] >= separator) {
 			right.push_back(t);
 		}
 	}
@@ -41,9 +41,9 @@ class KdTree {
 		KdTree* left = nullptr;
 		KdTree* right = nullptr;
 		AABB aabb;
-		std::vector<Triangle> triangles { };
+		Triangles triangles { };
 
-		KdTree(Triangles& triangles, Axis axis) {
+		KdTree(const Triangles& triangles, Axis axis) {
 			this->axis = axis;
 			this->aabb = AABB(triangles);
 //			Vector3 v = this->aabb.maximum - this->aabb.minimum;
@@ -97,17 +97,6 @@ double averageTrianglesPerLeaf(const KdTree* tree) {
 	return (double) countTriangles(tree) / (double) countLeafs(tree);
 }
 
-void traverse(const Ray& ray, const KdTree* tree, vector<const KdTree*>* result) {
-	if (intersectAABB(ray, tree->aabb)) {
-		if (tree->isLeaf()) {
-			result->push_back(tree);
-		} else {
-			traverse(ray, tree->left, result);
-			traverse(ray, tree->right, result);
-		}
-	}
-}
-
 bool find(const KdTree* tree, const Ray& ray, const Triangle* origin, Triangle* result, float* d, Vector3& intersectionOut, vector<AABB>* intersectedAABB) {
 	if (intersectAABB(ray, tree->aabb)) {
 		if (tree->isLeaf()) {
@@ -117,21 +106,21 @@ bool find(const KdTree* tree, const Ray& ray, const Triangle* origin, Triangle* 
 			}
 
 			bool found = false;
-			for (Triangle triangle : tree->triangles) {
-				if (origin && (origin->id == triangle.id)) {
+			for (const Triangle* triangle : tree->triangles) {
+				if (origin == triangle) {
 					continue;
 				}
 
-				Vector3 intersection(0.0, 0.0, 0.0);
-				if (!intersectTriangle(ray, triangle, intersection)) {
+				std::unique_ptr<Vector3> intersection = intersectTriangle(ray, *triangle);
+				if (!intersection) {
 					continue;
 				}
 
-				float dist = Vector3::distance(ray.getOrigin(), intersection);
+				float dist = Vector3::distance(ray.getOrigin(), *intersection);
 
 				if (dist < *d) {
-					intersectionOut = intersection;
-					*result = triangle;
+					intersectionOut = *intersection;
+					*result = *triangle;
 					*d = dist;
 					found = true;
 				}
