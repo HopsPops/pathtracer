@@ -116,6 +116,7 @@ class Renderer {
 		bool ambient = true;
 		bool specular = true;
 		bool diffuse = true;
+		float lineWidth = 1.0f;
 		std::unique_ptr<Shader> defaultShader = std::unique_ptr<Shader>();
 		std::unique_ptr<Shader> lineShader = std::unique_ptr<Shader>();
 
@@ -130,7 +131,7 @@ class Renderer {
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			glEnable(GL_BLEND);
 //			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-//			glLineWidth(3);
+			glLineWidth(lineWidth);
 
 			unsigned int vao = 0;
 			glGenVertexArrays(1, &vao);
@@ -139,6 +140,14 @@ class Renderer {
 
 		void clearColor(float x, float y, float z) {
 			glClearColor(x, y, z, 1.0f);
+		}
+
+		void setLineWidth(float width) {
+			if (this->lineWidth == width) {
+				return;
+			}
+			this->lineWidth = width;
+			glLineWidth(width);
 		}
 
 		void clearColorBuffer() {
@@ -215,6 +224,12 @@ class Renderer {
 			glBindVertexArray(0);
 			glDeleteBuffers(1, &vbo);
 			glDeleteVertexArrays(1, &vao);
+		}
+
+		void drawTriangle(const Triangle& triangle, const Camera& camera, Vector4 color) {
+			drawLine(triangle.v1.position, triangle.v2.position, camera, color);
+			drawLine(triangle.v2.position, triangle.v3.position, camera, color);
+			drawLine(triangle.v3.position, triangle.v1.position, camera, color);
 		}
 
 		void draw(OpenglMesh m, const Camera& camera, const Matrix4x4& model, Textures textures) {
@@ -295,10 +310,8 @@ class Renderer {
 		}
 
 		void drawKdTree(const KdTree* tree, const Camera& camera) {
-			glLineWidth(1);
 			int d = depth(tree);
 			drawKdTree(tree, camera, 0, d);
-			glLineWidth(3);
 		}
 
 		void drawKdTree(const KdTree* tree, const Camera& camera, int level, int depth) {
@@ -306,19 +319,19 @@ class Renderer {
 				return;
 			}
 			if (tree->isLeaf()) {
-				if (tree->axis == X) {
-					drawAABB(tree->aabb, camera, Vector4 { 1.0f, 0.0f, 0.0f, 1.0f - (float) (level / 1.5f / (float) depth) });
-				} else if (tree->axis == Y) {
-					drawAABB(tree->aabb, camera, Vector4 { 0.0f, 1.0f, 0.0f, 1.0f - (float) (level / 1.5f / (float) depth) });
+				if (tree->getAxis() == X) {
+					drawAABB(tree->getAABB(), camera, Vector4 { 1.0f, 0.0f, 0.0f, 1.0f - (float) (level / 1.5f / (float) depth) });
+				} else if (tree->getAxis() == Y) {
+					drawAABB(tree->getAABB(), camera, Vector4 { 0.0f, 1.0f, 0.0f, 1.0f - (float) (level / 1.5f / (float) depth) });
 				} else {
-					drawAABB(tree->aabb, camera, Vector4 { 0.0f, 0.0f, 1.0f, 1.0f - (float) (level / 1.5f / (float) depth) });
+					drawAABB(tree->getAABB(), camera, Vector4 { 0.0f, 0.0f, 1.0f, 1.0f - (float) (level / 1.5f / (float) depth) });
 				}
 			}
-			drawKdTree(tree->left, camera, level + 1, depth);
-			drawKdTree(tree->right, camera, level + 1, depth);
+			drawKdTree(tree->getLeft(), camera, level + 1, depth);
+			drawKdTree(tree->getRight(), camera, level + 1, depth);
 		}
 
-		void drawAABB(const AABB& aabb, const Camera& camera, Vector4 color) {
+		void drawAABB(const AABB& aabb, const Camera& camera, const Vector4& color) {
 
 			Vector3 leftBottomDown = aabb.getMin();
 			Vector3 leftTopDown(aabb.getMin().x, aabb.getMin().y, aabb.getMax().z);
@@ -335,22 +348,85 @@ class Renderer {
 			rightTopUp.y = aabb.getMax().y;
 
 			// down
-			drawLine(leftBottomDown, rightBottomDown, camera, color);
-			drawLine(rightBottomDown, rightTopDown, camera, color);
-			drawLine(rightTopDown, leftTopDown, camera, color);
-			drawLine(leftTopDown, leftBottomDown, camera, color);
+//			drawLine(leftBottomDown, rightBottomDown, camera, color);
+//			drawLine(rightBottomDown, rightTopDown, camera, color);
+//			drawLine(rightTopDown, leftTopDown, camera, color);
+//			drawLine(leftTopDown, leftBottomDown, camera, color);
 
-			// up
-			drawLine(leftBottomUp, rightBottomUp, camera, color);
-			drawLine(rightBottomUp, rightTopUp, camera, color);
-			drawLine(rightTopUp, leftTopUp, camera, color);
-			drawLine(leftTopUp, leftBottomUp, camera, color);
+// up
+//			drawLine(leftBottomUp, rightBottomUp, camera, color);
+//			drawLine(rightBottomUp, rightTopUp, camera, color);
+//			drawLine(rightTopUp, leftTopUp, camera, color);
+//			drawLine(leftTopUp, leftBottomUp, camera, color);
 
-			// sides
-			drawLine(leftBottomDown, leftBottomUp, camera, color);
-			drawLine(leftTopDown, leftTopUp, camera, color);
-			drawLine(rightBottomDown, rightBottomUp, camera, color);
-			drawLine(rightTopDown, rightTopUp, camera, color);
+// sides
+//			drawLine(leftBottomDown, leftBottomUp, camera, color);
+//			drawLine(leftTopDown, leftTopUp, camera, color);
+//			drawLine(rightBottomDown, rightBottomUp, camera, color);
+//			drawLine(rightTopDown, rightTopUp, camera, color);
+
+			lineShader->use();
+			lineShader->set("color", color);
+			lineShader->set("view", camera.view());
+			lineShader->set("projection", camera.perspective(window->aspectRatio()));
+
+//			GLfloat buffer[] = { v1.x, v1.y, v1.z, v2.x, v2.y, v2.z };
+			vector<Vector3> buffer { };
+
+			buffer.push_back(leftBottomDown);
+			buffer.push_back(rightBottomDown);
+
+			buffer.push_back(rightBottomDown);
+			buffer.push_back(rightTopDown);
+
+			buffer.push_back(rightTopDown);
+			buffer.push_back(leftTopDown);
+
+			buffer.push_back(leftTopDown);
+			buffer.push_back(leftBottomDown);
+
+			buffer.push_back(leftBottomUp);
+			buffer.push_back(rightBottomUp);
+
+			buffer.push_back(rightBottomUp);
+			buffer.push_back(rightTopUp);
+
+			buffer.push_back(rightTopUp);
+			buffer.push_back(leftTopUp);
+
+			buffer.push_back(leftTopUp);
+			buffer.push_back(leftBottomUp);
+
+			buffer.push_back(leftBottomDown);
+			buffer.push_back(leftBottomUp);
+
+			buffer.push_back(leftTopDown);
+			buffer.push_back(leftTopUp);
+
+			buffer.push_back(rightBottomDown);
+			buffer.push_back(rightBottomUp);
+
+			buffer.push_back(rightTopDown);
+			buffer.push_back(rightTopUp);
+
+			unsigned int vao = 0;
+			unsigned int vbo = 0;
+
+			glGenVertexArrays(1, &vao);
+			glBindVertexArray(vao);
+
+			glGenBuffers(1, &vbo);
+			glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+			glBufferData(GL_ARRAY_BUFFER, sizeof(Vector3) * buffer.size(), buffer.data(), GL_STATIC_DRAW);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *) 0);
+			glEnableVertexAttribArray(0);
+			glDrawArrays(GL_LINES, 0, buffer.size());
+
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			glBindVertexArray(0);
+			glDeleteBuffers(1, &vbo);
+			glDeleteVertexArrays(1, &vao);
 		}
 
 };

@@ -11,14 +11,21 @@
 #include <stdexcept>
 #include <tuple>
 #include <vector>
+#include <set>
+#include <assert.h>
 
 enum Axis {
 	X = 0, Y = 1, Z = 2
 };
 
-std::tuple<Triangles, Triangles> partitionAxis(const Triangles& triangles, Axis axis, double separator) {
-	Triangles left;
-	Triangles right;
+struct PartitionResult {
+	Triangles left {};
+	Triangles right {};
+};
+
+PartitionResult partitionAxis(const Triangles& triangles, Axis axis, double separator) {
+	Triangles left {};
+	Triangles right {};
 	for (const Triangle* t : triangles) {
 		if (t->v1.position[axis] <= separator || t->v2.position[axis] <= separator || t->v3.position[axis] <= separator) {
 			left.push_back(t);
@@ -27,40 +34,59 @@ std::tuple<Triangles, Triangles> partitionAxis(const Triangles& triangles, Axis 
 			right.push_back(t);
 		}
 	}
-	return std::make_tuple(left, right);
+	return PartitionResult {left, right};
 }
 
-std::tuple<Triangles, Triangles> partition(const Triangles& triangles, Axis axis) {
+PartitionResult partition(const Triangles& triangles, Axis axis) {
 	return partitionAxis(triangles, axis, trianglesMedian(triangles, (int) axis));
 }
 
 class KdTree {
 
-	public:
+	private:
 		Axis axis = X;
 		KdTree* left = nullptr;
 		KdTree* right = nullptr;
 		AABB aabb;
 		Triangles triangles { };
+	public:
 
 		KdTree(const Triangles& triangles, Axis axis) {
 			this->axis = axis;
 			this->aabb = AABB(triangles);
-//			Vector3 v = this->aabb.maximum - this->aabb.minimum;
-//			this->aabb.maximum = this->aabb.maximum + (0.1 * v);
-//			this->aabb.minimum = this->aabb.minimum - (0.1 * v);
-			if (triangles.size() > 256) {
-				std::tuple<Triangles, Triangles> splited = partition(triangles, this->axis);
 
-				this->left = new KdTree(std::get<0>(splited), static_cast<Axis>((this->axis + 1) % 3));
-				this->right = new KdTree(std::get<1>(splited), static_cast<Axis>((this->axis + 1) % 3));
+			if (triangles.size() > 128) {
+				PartitionResult splited = partition(triangles, this->axis);
+				this->left = new KdTree(splited.left, static_cast<Axis>((this->axis + 1) % 3));
+				this->right = new KdTree(splited.right, static_cast<Axis>((this->axis + 1) % 3));
 			} else {
 				this->triangles = triangles;
 			}
 		}
 
 		bool isLeaf() const {
+			assert(((left == nullptr) ^ (right == nullptr)) == 0);
 			return left == nullptr || right == nullptr;
+		}
+
+		Axis getAxis() const {
+			return axis;
+		}
+
+		const KdTree* getLeft() const {
+			return left;
+		}
+
+		const KdTree* getRight() const {
+			return right;
+		}
+
+		const AABB& getAABB() const {
+			return aabb;
+		}
+
+		const Triangles& getTriangles() const {
+			return triangles;
 		}
 
 };
@@ -69,7 +95,7 @@ unsigned int depth(const KdTree* tree, unsigned int level) {
 	if (tree->isLeaf()) {
 		return level + 1;
 	} else {
-		return std::max(depth(tree->left, level + 1), depth(tree->right, level + 1));
+		return std::max(depth(tree->getLeft(), level + 1), depth(tree->getRight(), level + 1));
 	}
 }
 
@@ -81,15 +107,23 @@ unsigned int countLeafs(const KdTree* tree) {
 	if (tree->isLeaf()) {
 		return 1;
 	} else {
-		return countLeafs(tree->left) + countLeafs(tree->right);
+		return countLeafs(tree->getLeft()) + countLeafs(tree->getRight());
+	}
+}
+
+unsigned int countSubtrees(const KdTree* tree) {
+	if (tree->isLeaf()) {
+		return 1;
+	} else {
+		return countSubtrees(tree->getLeft()) + countSubtrees(tree->getRight()) + 2;
 	}
 }
 
 unsigned int countTriangles(const KdTree* tree) {
 	if (tree->isLeaf()) {
-		return tree->triangles.size();
+		return tree->getTriangles().size();
 	} else {
-		return countTriangles(tree->left) + countTriangles(tree->right);
+		return countTriangles(tree->getLeft()) + countTriangles(tree->getRight());
 	}
 }
 
@@ -97,17 +131,26 @@ double averageTrianglesPerLeaf(const KdTree* tree) {
 	return (double) countTriangles(tree) / (double) countLeafs(tree);
 }
 
-bool find(const KdTree* tree, const Ray& ray, const Triangle* origin, Triangle* result, float* d, Vector3& intersectionOut, vector<AABB>* intersectedAABB) {
-	if (intersectAABB(ray, tree->aabb)) {
+class KdTreeTraversalResult {
+	public:
+		std::unique_ptr<Vector3> intersectionPoint { nullptr };
+		const Triangle* triangle = nullptr;
+		const KdTree* leaf = nullptr;
+		std::set<const KdTree*> traversedLeafs {};
+		std::set<const Triangle*> intersectedTriangles {};
+
+		bool didHit() {
+			return (bool) intersectionPoint;
+		}
+
+};
+bool find(const KdTree* tree, const Ray& ray, const Triangle* origin, KdTreeTraversalResult* result, double* d) {
+	if (intersectAABB(ray, tree->getAABB())) {
 		if (tree->isLeaf()) {
-
-			if (intersectedAABB) {
-				intersectedAABB->push_back(tree->aabb);
-			}
-
+			result->traversedLeafs.insert(tree);
 			bool found = false;
-			for (const Triangle* triangle : tree->triangles) {
-				if (origin == triangle) {
+			for (const Triangle* triangle : tree->getTriangles()) {
+				if (origin && (origin->id == triangle->id)) {
 					continue;
 				}
 
@@ -115,28 +158,32 @@ bool find(const KdTree* tree, const Ray& ray, const Triangle* origin, Triangle* 
 				if (!intersection) {
 					continue;
 				}
+				result->intersectedTriangles.insert(triangle);
 
-				float dist = Vector3::distance(ray.getOrigin(), *intersection);
+				double dist = Vector3::distance(ray.getOrigin(), *intersection);
 
 				if (dist < *d) {
-					intersectionOut = *intersection;
-					*result = *triangle;
+					result->intersectionPoint = std::unique_ptr<Vector3>(intersection.release());
+					result->triangle = triangle;
+					result->leaf = tree;
 					*d = dist;
 					found = true;
 				}
 			}
 			return found;
 		} else {
-			return find(tree->left, ray, origin, result, d, intersectionOut, intersectedAABB) ||
-					find(tree->right, ray, origin, result, d, intersectionOut, intersectedAABB);
+			bool foundLeft = find(tree->getLeft(), ray, origin, result, d);
+			bool foundRight = find(tree->getRight(), ray, origin, result, d);
+			return foundLeft || foundRight;
 		}
+
 	} else {
 		return false;
 	}
 }
 
-bool find(const KdTree* tree, const Ray& ray, const Triangle* origin, Triangle* result, Vector3& intersectionOut) {
-	float d = INFINITY;
-	return find(tree, ray, origin, result, &d, intersectionOut, nullptr);
+bool find(const KdTree* tree, const Ray& ray, const Triangle* origin, KdTreeTraversalResult* result) {
+	double d = INFINITY;
+	return find(tree, ray, origin, result, &d);
 }
 

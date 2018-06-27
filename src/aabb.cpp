@@ -25,26 +25,15 @@ AABB::AABB(const Triangles& triangles) {
 	Vector3 maximum(-INFINITY, -INFINITY, -INFINITY);
 
 	for (const Triangle* triangle : triangles) {
-		minimum.x = min(minimum.x, triangle->v1.position.x);
-		minimum.y = min(minimum.y, triangle->v1.position.y);
-		minimum.z = min(minimum.z, triangle->v1.position.z);
-		maximum.x = max(maximum.x, triangle->v1.position.x);
-		maximum.y = max(maximum.y, triangle->v1.position.y);
-		maximum.z = max(maximum.z, triangle->v1.position.z);
+		for (int v = 0; v < 3; v++) {
+			minimum.x = min(minimum.x, triangle->operator[](v).position.x);
+			minimum.y = min(minimum.y, triangle->operator[](v).position.y);
+			minimum.z = min(minimum.z, triangle->operator[](v).position.z);
 
-		minimum.x = min(minimum.x, triangle->v2.position.x);
-		minimum.y = min(minimum.y, triangle->v2.position.y);
-		minimum.z = min(minimum.z, triangle->v2.position.z);
-		maximum.x = max(maximum.x, triangle->v2.position.x);
-		maximum.y = max(maximum.y, triangle->v2.position.y);
-		maximum.z = max(maximum.z, triangle->v2.position.z);
-
-		minimum.x = min(minimum.x, triangle->v3.position.x);
-		minimum.y = min(minimum.y, triangle->v3.position.y);
-		minimum.z = min(minimum.z, triangle->v3.position.z);
-		maximum.x = max(maximum.x, triangle->v3.position.x);
-		maximum.y = max(maximum.y, triangle->v3.position.y);
-		maximum.z = max(maximum.z, triangle->v3.position.z);
+			maximum.x = max(maximum.x, triangle->operator[](v).position.x);
+			maximum.y = max(maximum.y, triangle->operator[](v).position.y);
+			maximum.z = max(maximum.z, triangle->operator[](v).position.z);
+		}
 	}
 	this->minimum = minimum;
 	this->maximum = maximum;

@@ -35,6 +35,7 @@ class Vector3 {
 		Vector3 operator-(Vector3) const;
 		Vector3 operator+(Vector3) const;
 		float operator [](int i) const;
+		float* operator [](int i);
 		Vector3 copy() const;
 
 		const Vector3 operator=(const Vector3&);
@@ -42,8 +43,8 @@ class Vector3 {
 		friend std::ostream& operator<<(std::ostream&, const Vector3&);
 };
 
-Vector3 operator*(float, Vector3); //return this
-Vector3 operator*(Vector3, float); //return this
+Vector3 operator*(float, Vector3);
+Vector3 operator*(Vector3, float);
 
 class Vector4 {
 	public:

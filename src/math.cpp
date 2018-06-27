@@ -290,7 +290,7 @@ Vector4::operator Vector3() const {
 }
 
 float Vector3::distance(Vector3 v1, Vector3 v2) {
-	Vector3 sub = v1 - v2;
+	Vector3 sub = v2 - v1;
 	return sub.length();
 }
 
@@ -320,6 +320,18 @@ float Vector3::operator [](int i) const {
 		return y;
 	} else if (i == 2) {
 		return z;
+	} else {
+		throw std::invalid_argument("i > 2");
+	}
+}
+
+float* Vector3::operator [](int i) {
+	if (i == 0) {
+		return &x;
+	} else if (i == 1) {
+		return &y;
+	} else if (i == 2) {
+		return &z;
 	} else {
 		throw std::invalid_argument("i > 2");
 	}

@@ -1,7 +1,7 @@
 #include <ray.hpp>
 
 Ray::Ray(Vector3 origin, Vector3 direction) :
-		origin(origin), direction(direction) {
+		origin(origin), direction(direction.normalize()) {
 };
 
 Ray Ray::createRay(Camera& c, int screenX, int screenY, int width, int height, double aspectRatio) {
