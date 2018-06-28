@@ -1,5 +1,5 @@
-#pragma once
 #include "math.hpp"
+#pragma once
 #include "triangle.hpp"
 
 class AABB {

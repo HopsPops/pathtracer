@@ -29,6 +29,7 @@ using namespace std;
 
 void raytrace(Model*);
 void loadModel(string);
+Vector3 shotRay(const Ray&, const Triangle*, int);
 
 unique_ptr<Window> window;
 Renderer* renderer;
@@ -124,13 +125,14 @@ void keyCallback(GLFWwindow* win, int key, int scancode, int action, int mods) {
 //	} else if (key == GLFW_KEY_T && action == GLFW_PRESS) {
 //	} else if (key == GLFW_KEY_M && action == GLFW_PRESS) {
 //		renderer->toggleMsaa();
-//	} else if (key == GLFW_KEY_A && action == GLFW_PRESS) {
-//		renderer->toggleAmbientLight();
-//	} else if (key == GLFW_KEY_S && action == GLFW_PRESS) {
-//		renderer->toggleSpecularLight();
-//	} else if (key == GLFW_KEY_D && action == GLFW_PRESS) {
-//		renderer->toggleDiffuseLight();
-//	} else if (key == GLFW_KEY_T && action == GLFW_PRESS) {
+	} else if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
+		renderer->toggleAmbientLight();
+	} else if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
+		renderer->toggleSpecularLight();
+	} else if (key == GLFW_KEY_3 && action == GLFW_PRESS) {
+		renderer->toggleDiffuseLight();
+	} else if (key == GLFW_KEY_T && action == GLFW_PRESS) {
+
 		raytrace(m);
 	} else if (key == GLFW_KEY_Q && action == GLFW_PRESS) {
 		saveBuffer();
@@ -185,47 +187,20 @@ class RaytraceStatistics {
 void rt(Model* model, KdTree* tree, unsigned char* data, int h, int n, RaytraceStatistics* stats) {
 	const int w = window->width();
 
-//	Matrix4x4 modelMatrix = transformations();
-
 	for (int y = h; y < n; y++) {
 		for (int x = 0; x < w; x++) {
-//			Ray ray = Ray::createRay(camera, x, y, w, window->height(), window->aspectRatio());
-//			stats->rays++;
 
-//			if (!intersectAABB(ray, Matrix4x4::multiply(modelMatrix, model->bounding.getMin(), 1.0f), Matrix4x4::multiply(modelMatrix, model->bounding.getMax(), 1.0f))) {
-//				continue;
-//			}
+			Vector3 color { };
+			int n = 50;
+			for (int i = 0; i < n; i++) {
+				Ray ray = Ray::createRay(camera, x, y, w, window->height(), window->aspectRatio());
+				color = 1.0 / n * shotRay(ray, nullptr, 1);
+			}
 
-//			float depth = INFINITY;
-//
-//			vector<const KdTree*> trees { };
-//			traverse(ray, tree, &trees);
-//			for (const KdTree* t : trees) {
-//				for (const Triangle* triangle : t->triangles) {
-//					Vector3 v1 = triangle->v1.position;
-//					Vector3 v2 = triangle->v2.position;
-//					Vector3 v3 = triangle->v3.position;
-//
-//					stats->tests++;
-//					Vector3 intersection(0.0, 0.0, 0.0);
-//
-//					if (!intersectTriangle(ray, v1, v2, v3, intersection)) {
-//						continue;
-//					} else {
-//						depth = 1.0f;
-//						goto escape;
-//					}
-//				}
-//			}
-//
-//			escape:
-//			if (depth < INFINITY) {
-//				data[(x + y * w) * 3 + 0] = 255;
-//				data[(x + y * w) * 3 + 1] = 0;
-//				data[(x + y * w) * 3 + 2] = 0;
-//			}
+			data[(x + y * w) * 3 + 0] = color.x * 255;
+			data[(x + y * w) * 3 + 1] = color.y * 255;
+			data[(x + y * w) * 3 + 2] = color.z * 255;
 		}
-//		cout << " " << y << endl;
 	}
 }
 
@@ -240,13 +215,6 @@ void raytrace(Model* model) {
 	RaytraceStatistics* stats = new RaytraceStatistics();
 	stats->tests = 0;
 	stats->intersections = 0;
-
-//	KdTree tree(*modelTriangles, X);
-	printf("depth %u\n", depth(kdTree));
-	printf("triangles %u\n", countTriangles(kdTree));
-	printf("leafs %u\n", countLeafs(kdTree));
-	printf("subtrees %u\n", countSubtrees(kdTree));
-	printf("average %lf\n", averageTrianglesPerLeaf(kdTree));
 
 	for (int i = 0; i < q; i++) {
 		int from = h / q * i;
@@ -297,6 +265,14 @@ class Line {
 		float progress = 0.0f;
 };
 
+class Light {
+	public:
+		Vector3 position { };
+		Vector3 color { };
+};
+
+Light light1 = { Vector3 { 2.0f, 2.0f, 0.0f }, Vector3 { 1.0f, 1.0f, 1.0f } };
+
 vector<Line> lines;
 set<const KdTree*> trees { };
 set<const Triangle*> interTriangles { };
@@ -304,55 +280,107 @@ const KdTree* leaf = nullptr;
 
 std::random_device rd;
 std::mt19937 gen(rd());
-std::uniform_real_distribution<float> dis(-1.0, 1.0);
+std::uniform_real_distribution<float> fiDis(-M_PI / 2.0, M_PI / 2.0);
+std::uniform_real_distribution<float> phiDis(-M_PI / 4.0f, M_PI / 4.0f);
 
-void shotRay(const Ray& ray, const Triangle* origin, int n) {
-	if (n <= 0) {
-		return;
+std::mt19937 genRussianRoulette(rd());
+std::uniform_real_distribution<float> russianRouletteDistribution(0.0f, 1.0f);
+
+Vector3 albedo { 0.0f, 1.0f, 0.0f };
+
+Vector3 shotRay(const Ray& ray, const Triangle* origin, int n) {
+	if (n > 11 || (n > 2 && russianRouletteDistribution(genRussianRoulette) > 0.7f)) {
+		return Vector3 { 0.0f, 0.0f, 0.0f };
 	}
 
-	KdTreeTraversalResult* result = new KdTreeTraversalResult;
+	unique_ptr<KdTreeTraversalResult> traverseResult(new KdTreeTraversalResult);
 
-	find(kdTree, ray, origin, result);
+	find(kdTree, ray, origin, traverseResult.get());
+	Vector3 result {};
+	Vector3 directLight { };
+	Vector3 indirectLight { };
 
-	if (!result->didHit()) {
-		cout << "zero" << endl;
-		lines.push_back(Line { ray.getOrigin(), ray.getOrigin() + 50 * ray.getDirection(), Vector4 { 0.0f, 0.0f, 0.0f, 1.0f } });
-		return;
+	if (!traverseResult->didHit()) {
+		return Vector3 { 0.75f, 0.7f, 0.7f };
 	} else {
-		interTriangles.insert(result->intersectedTriangles.begin(), result->intersectedTriangles.end());
-		trees.insert(result->traversedLeafs.begin(), result->traversedLeafs.end());
-		lines.push_back(Line { ray.getOrigin(), *result->intersectionPoint, Vector4 { 0.0f, 0.0f, 0.0f, 1.0f } });
-
-//		const Vector3 normal = result->triangle->v1.normal;
-		const Vector3 normal = result->triangle->normal();
-		Vector3 newDir = (ray.getDirection() - (2 * Vector3::dot(ray.getDirection(), normal) * normal)).normalize();
-//		if(!result->triangle->isCounterclockwise()) {
-//			newDir.negate();
-//		}
+		const Vector3 intersectionPoint = *traverseResult->intersectionPoint;
+		const Vector3 normal = traverseResult->triangle->normal();
 
 		{
-			SphericalVector sv { newDir };
-			float fi = distribution(dis(gen));
-			float phi = distribution(dis(gen));
-			cout << fi << ", " << phi << ", sv: " << sv << ", nsv:";
-			sv.fi += fi;
-			sv.phi += phi;
-			Vector3 secondaryDir = Vector3 {sv}.normalize();
-			cout << sv << ", sdir: " << secondaryDir << endl;
-			if(!result->triangle->isCounterclockwise()) {
-				secondaryDir.negate();
+			Vector3 lightDir = (light1.position - intersectionPoint).normalize();
+			Ray lightRay { intersectionPoint, lightDir };
+			if (!findAny(kdTree, lightRay, traverseResult->triangle)) {
+				directLight = Vector3::cosineAngle(lightDir, normal) * light1.color;
 			}
-			lines.push_back(Line { *result->intersectionPoint + 50 * secondaryDir, *result->intersectionPoint, Vector4 { 0.5f, 0.5f, 1.0f, 1.0f } });
 		}
 
-		cout << "triangle: " << result->triangle->id << ", inters " << *result->intersectionPoint << " raydir: " << ray.getDirection() << ", newdir" << newDir << ", normal " << normal << endl;
-		leaf = result->leaf;
-		shotRay(Ray { *result->intersectionPoint, newDir }, result->triangle, n - 1);
+		SphericalVector sv { normal };
+		sv.fi += fiDis(gen);
+		sv.phi += phiDis(gen);
+		Vector3 randomHemisphereDir = Vector3 { sv }.normalize();
+
+		Ray newRay { intersectionPoint, randomHemisphereDir };
+//		Vector3 idealReflectionDir = (ray.getDirection() - (2 * Vector3::dot(ray.getDirection(), normal) * normal)).normalize();
+		float pdf = 1.0 / (2.0f * M_PI);
+		float theta = Vector3::cosineAngle(normal, randomHemisphereDir);
+		indirectLight += theta * shotRay(newRay, traverseResult->triangle, n + 1) / pdf;
+
+		result = (directLight / M_PI + 2 * indirectLight) * albedo;
+//		shotRay(Ray { intersectionPoint, randomHemisphereDir }, traverseResult->triangle, n + 1)
 	}
-	delete result;
+	return result;
 }
 
+/*
+ Vector3 shotRay(const Ray& ray, const Triangle* origin, int n) {
+ if (n > 11 || (n > 2 && russianRouletteDistribution(genRussianRoulette) > 0.7f)) {
+ return Vector3 { };
+ }
+
+ KdTreeTraversalResult* traverseResult = new KdTreeTraversalResult;
+
+ find(kdTree, ray, origin, traverseResult);
+ Vector3 light { };
+
+ if (!traverseResult->didHit()) {
+ cout << "zero" << endl;
+ lines.push_back(Line { ray.getOrigin(), ray.getOrigin() + 50 * ray.getDirection(), Vector4 { 0.0f, 0.0f, 0.0f, 1.0f } });
+ return light;
+ } else {
+ const Vector3 intersectionPoint = *traverseResult->intersectionPoint;
+ interTriangles.insert(traverseResult->intersectedTriangles.begin(), traverseResult->intersectedTriangles.end());
+ trees.insert(traverseResult->traversedLeafs.begin(), traverseResult->traversedLeafs.end());
+ lines.push_back(Line { ray.getOrigin(), intersectionPoint, Vector4 { 0.0f, 0.0f, 0.0f, 1.0f } });
+
+ const Vector3 normal = traverseResult->triangle->normal();
+ Vector3 idealReflectionDir = (ray.getDirection() - (2 * Vector3::dot(ray.getDirection(), normal) * normal)).normalize();
+
+ SphericalVector sv { normal };
+ //		float fi = distribution(dis(gen));
+ //		float phi = distribution(dis(gen));
+ //		cout << fi << ", " << phi << ", sv: " << sv << ", nsv:";
+ sv.fi += fiDis(gen);
+ sv.phi += phiDis(gen);
+ Vector3 randomHemisphereDir = Vector3 { sv }.normalize();
+ //		cout << sv << ", sdir: " << secondaryDir << endl;
+
+ Vector3 lightDir = (light1.position - intersectionPoint).normalize();
+ {
+ lines.push_back(Line { intersectionPoint + 50 * lightDir, intersectionPoint, Vector4 { 1.0f, 1.0f, 0.0f, 1.0f } });
+ Ray lightRay { intersectionPoint, lightDir };
+ if (!findAny(kdTree, lightRay, traverseResult->triangle)) {
+ light = light + light1.color;
+ }
+ }
+
+ //		cout << "triangle: " << traverseResult->triangle->id << ", inters " << *traverseResult->intersectionPoint << " raydir: " << ray.getDirection() << ", newdir" << newDir << ", normal " << normal << endl;
+ leaf = traverseResult->leaf;
+ light = light + Vector3::cosineAngle(lightDir, ) * shotRay(Ray { intersectionPoint, randomHemisphereDir }, traverseResult->triangle, n + 1);
+ }
+ delete traverseResult;
+ return (1.0 / n) * light;
+ }
+ */
 void mouseButtonCallback(GLFWwindow* win, int button, int action, int mods) {
 	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
 		Ray ray = Ray::createRay(camera, window->cursorX(), window->cursorY(), window->width(), window->height(), window->aspectRatio());
@@ -361,12 +389,12 @@ void mouseButtonCallback(GLFWwindow* win, int button, int action, int mods) {
 		trees.clear();
 		interTriangles.clear();
 		leaf = nullptr;
-		shotRay(ray, nullptr, 10);
+		cout << shotRay(ray, nullptr, 1) << endl;
 	}
 }
 
 int main(int argc, char** argv) {
-	if (!loadConfig(config)) {
+	if (!loadConfig(argv[1], config)) {
 		cout << "unable to load config file\n" << endl;
 	}
 	config.print(cout);
@@ -441,29 +469,29 @@ int main(int argc, char** argv) {
 						break;
 					}
 				}
+				renderer->drawPoint(light1.position, camera, Vector4 { 1.0f, 1.0f, 0.0f, 1.0f });
 
-				for (const KdTree* tree : trees) {
+//				for (const KdTree* tree : trees) {
 //					renderer->drawAABB(tree->getAABB(), camera, Vector4(1.0f, 0.0f, 1.0f, 1.0f));
-					renderer->drawKdTree(tree, camera);
-
-				}
-				for (const Triangle* triangle : interTriangles) {
+//					renderer->drawKdTree(tree, camera);
+//				}
+//				for (const Triangle* triangle : interTriangles) {
 //					renderer->drawAABB(tree->aabb, camera, Vector4(1.0f, 0.0f, 1.0f, 1.0f));
-					renderer->drawTriangle(*triangle, camera, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-				}
-				renderer->setLineWidth(4.0f);
-				if (leaf) {
-					if (leaf->getAxis() == X) {
-						renderer->drawAABB(leaf->getAABB(), camera, Vector4 { 1.0f, 0.0f, 0.0f, 1.0f });
-					} else if (leaf->getAxis() == Y) {
-						renderer->drawAABB(leaf->getAABB(), camera, Vector4 { 0.0f, 1.0f, 0.0f, 1.0f });
-					} else {
-						renderer->drawAABB(leaf->getAABB(), camera, Vector4 { 0.0f, 0.0f, 1.0f, 1.0f });
-					}
-					renderer->drawKdTree(leaf, camera);
+//					renderer->drawTriangle(*triangle, camera, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+//				}
+//				renderer->setLineWidth(4.0f);
+//				if (leaf) {
+//					if (leaf->getAxis() == X) {
+//						renderer->drawAABB(leaf->getAABB(), camera, Vector4 { 1.0f, 0.0f, 0.0f, 1.0f });
+//					} else if (leaf->getAxis() == Y) {
+//						renderer->drawAABB(leaf->getAABB(), camera, Vector4 { 0.0f, 1.0f, 0.0f, 1.0f });
+//					} else {
+//						renderer->drawAABB(leaf->getAABB(), camera, Vector4 { 0.0f, 0.0f, 1.0f, 1.0f });
+//					}
+//					renderer->drawKdTree(leaf, camera);
 //					renderer->drawAABB(leaf->getAABB(), camera, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-				}
-				renderer->setLineWidth(1.0f);
+//				}
+//				renderer->setLineWidth(1.0f);
 			}
 
 			window->swapBuffers();

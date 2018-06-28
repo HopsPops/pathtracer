@@ -337,11 +337,25 @@ float* Vector3::operator [](int i) {
 	}
 }
 
+float Vector3::cosineAngle(const Vector3& v1, const Vector3& v2) {
+	return Vector3::dot(v1, v2) / (v1.length() * v2.length());
+}
+
+const Vector3& Vector3::operator +=(const Vector3& v) {
+	this->x += v.x;
+	this->y += v.y;
+	this->z += v.z;
+	return *this;
+}
+
+Vector3 Vector3::operator /(float factor) const {
+	return Vector3 { x / factor, y / factor, z / factor };
+}
+
 std::ostream& operator<<(std::ostream &stream, const Vector3& vec) {
 	stream << "{ " << vec.x << ", " << vec.y << ", " << vec.z << " }";
 	return stream;
 }
-
 
 Vector3 Vector3::copy() const {
 	return Vector3(x, y, z);
@@ -392,3 +406,11 @@ std::ostream& operator<<(std::ostream &stream, const SphericalVector& vec) {
 	stream << "{ " << vec.r << ", " << vec.phi << ", " << vec.fi << " }";
 	return stream;
 }
+
+Vector3 operator *(Vector3 v1, Vector3 v2) {
+	return Vector3 { v1.x * v2.x, v1.y * v2.y, v1.z * v2.z };
+}
+//
+//Vector3 operator -(Vector3 v1, Vector3 v2) {
+//	return Vector(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z);
+//}

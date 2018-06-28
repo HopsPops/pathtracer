@@ -36,16 +36,20 @@ class Vector3 {
 		Vector3(float x, float y, float z);
 		Vector3(const SphericalVector&);
 
+		static float cosineAngle(const Vector3&, const Vector3&);
+
 		static float dot(Vector3, Vector3);
 		static Vector3 cross(Vector3, Vector3);
 		static float distance(Vector3, Vector3);
 		Vector3 operator-(Vector3) const;
+		Vector3 operator/(float) const;
 		Vector3 operator+(Vector3) const;
 		float operator [](int i) const;
 		float* operator [](int i);
 		Vector3 copy() const;
 
 		const Vector3 operator=(const Vector3&);
+		const Vector3& operator+=(const Vector3&);
 		bool isZero() const;
 		friend std::ostream& operator<<(std::ostream&, const Vector3&);
 };
@@ -62,6 +66,8 @@ class SphericalVector {
 
 Vector3 operator*(float, Vector3);
 Vector3 operator*(Vector3, float);
+Vector3 operator*(Vector3, Vector3);
+//Vector3 operator-(Vector3, Vector3);
 
 class Vector4 {
 	public:

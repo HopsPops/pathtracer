@@ -172,9 +172,6 @@ bool find(const KdTree* tree, const Ray& ray, const Triangle* origin, KdTreeTrav
 			}
 			return found;
 		} else {
-//			bool foundLeft = find(tree->getLeft(), ray, origin, result, d);
-//			bool foundRight = find(tree->getRight(), ray, origin, result, d);
-//			return foundLeft || foundRight;
 			return find(tree->getLeft(), ray, origin, result, d) | find(tree->getRight(), ray, origin, result, d);
 		}
 
@@ -186,5 +183,28 @@ bool find(const KdTree* tree, const Ray& ray, const Triangle* origin, KdTreeTrav
 bool find(const KdTree* tree, const Ray& ray, const Triangle* origin, KdTreeTraversalResult* result) {
 	double d = INFINITY;
 	return find(tree, ray, origin, result, &d);
+}
+
+bool findAny(const KdTree* tree, const Ray& ray, const Triangle* exclude) {
+	if (intersectAABB(ray, tree->getAABB())) {
+		if (tree->isLeaf()) {
+			for (const Triangle* triangle : tree->getTriangles()) {
+				if(exclude && triangle->id == exclude->id) {
+					continue;
+				}
+
+				std::unique_ptr<Vector3> intersection = intersectTriangle(ray, *triangle);
+				if (!intersection) {
+					continue;
+				}
+				return true;
+			}
+			return false;
+		} else {
+			return findAny(tree->getLeft(), ray, exclude) || findAny(tree->getRight(), ray, exclude);
+		}
+	} else {
+		return false;
+	}
 }
 

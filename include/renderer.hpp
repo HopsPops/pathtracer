@@ -132,6 +132,7 @@ class Renderer {
 			glEnable(GL_BLEND);
 //			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 			glLineWidth(lineWidth);
+			glPointSize(5.0f);
 
 			unsigned int vao = 0;
 			glGenVertexArrays(1, &vao);
@@ -232,6 +233,34 @@ class Renderer {
 			drawLine(triangle.v3.position, triangle.v1.position, camera, color);
 		}
 
+		void drawPoint(const Vector3& point, const Camera& camera, const Vector4& color) {
+			lineShader->use();
+			lineShader->set("color", color);
+			lineShader->set("view", camera.view());
+			lineShader->set("projection", camera.perspective(window->aspectRatio()));
+
+			GLfloat buffer[] = { point.x, point.y, point.z };
+
+			unsigned int vao = 0;
+			unsigned int vbo = 0;
+
+			glGenVertexArrays(1, &vao);
+			glBindVertexArray(vao);
+
+			glGenBuffers(1, &vbo);
+			glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+			glBufferData(GL_ARRAY_BUFFER, sizeof(buffer), buffer, GL_STATIC_DRAW);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *) 0);
+			glEnableVertexAttribArray(0);
+			glDrawArrays(GL_POINTS, 0, 1);
+
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			glBindVertexArray(0);
+			glDeleteBuffers(1, &vbo);
+			glDeleteVertexArrays(1, &vao);
+		}
+
 		void draw(OpenglMesh m, const Camera& camera, const Matrix4x4& model, Textures textures) {
 			unsigned int diffuseNr = 1;
 			unsigned int specularNr = 1;
@@ -285,7 +314,7 @@ class Renderer {
 		void draw(const OpenglMesh& m, const Camera& camera, const Matrix4x4& model) {
 			defaultShader->use();
 			defaultShader->set("ambientColor", Vector3 { 1.0f, 1.0f, 1.0f });
-			defaultShader->set("lightPosition", Vector3 { 0.0f, 0.0f, 0.0f });
+			defaultShader->set("lightPosition", Vector3 { 2.0f, 2.0f, 0.0f });
 			defaultShader->set("cameraPosition", Vector3 { 0.0f, 0.0f, 0.0f });
 
 			defaultShader->set("colorOverride", Vector4 { 1.0f, 1.0f, 1.0f, 0.0f });

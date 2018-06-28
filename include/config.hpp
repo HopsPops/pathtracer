@@ -34,8 +34,8 @@ class Config {
 
 };
 
-bool loadConfig(Config& c) {
-	FILE* f = fopen("plik.rtc", "r");
+bool loadConfig(char* file, Config& c) {
+	FILE* f = fopen(file, "r");
 	if (!f) {
 		return false;
 	}
