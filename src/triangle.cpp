@@ -10,7 +10,7 @@ Vector3 Triangle::middle() {
 	return vec;
 }
 
-Vertex Triangle::operator [](int i) const {
+const Vertex& Triangle::operator [](int i) const {
 	if (i == 0) {
 		return v1;
 	} else if (i == 1) {

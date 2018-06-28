@@ -55,7 +55,7 @@ class KdTree {
 			this->axis = axis;
 			this->aabb = AABB(triangles);
 
-			if (triangles.size() > 128) {
+			if (triangles.size() > 32) {
 				PartitionResult splited = partition(triangles, this->axis);
 				this->left = new KdTree(splited.left, static_cast<Axis>((this->axis + 1) % 3));
 				this->right = new KdTree(splited.right, static_cast<Axis>((this->axis + 1) % 3));
@@ -172,9 +172,10 @@ bool find(const KdTree* tree, const Ray& ray, const Triangle* origin, KdTreeTrav
 			}
 			return found;
 		} else {
-			bool foundLeft = find(tree->getLeft(), ray, origin, result, d);
-			bool foundRight = find(tree->getRight(), ray, origin, result, d);
-			return foundLeft || foundRight;
+//			bool foundLeft = find(tree->getLeft(), ray, origin, result, d);
+//			bool foundRight = find(tree->getRight(), ray, origin, result, d);
+//			return foundLeft || foundRight;
+			return find(tree->getLeft(), ray, origin, result, d) | find(tree->getRight(), ray, origin, result, d);
 		}
 
 	} else {

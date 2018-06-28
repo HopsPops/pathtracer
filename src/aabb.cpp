@@ -26,13 +26,13 @@ AABB::AABB(const Triangles& triangles) {
 
 	for (const Triangle* triangle : triangles) {
 		for (int v = 0; v < 3; v++) {
-			minimum.x = min(minimum.x, triangle->operator[](v).position.x);
-			minimum.y = min(minimum.y, triangle->operator[](v).position.y);
-			minimum.z = min(minimum.z, triangle->operator[](v).position.z);
+			minimum.x = min(minimum.x, (*triangle)[v].position.x);
+			minimum.y = min(minimum.y, (*triangle)[v].position.y);
+			minimum.z = min(minimum.z, (*triangle)[v].position.z);
 
-			maximum.x = max(maximum.x, triangle->operator[](v).position.x);
-			maximum.y = max(maximum.y, triangle->operator[](v).position.y);
-			maximum.z = max(maximum.z, triangle->operator[](v).position.z);
+			maximum.x = max(maximum.x, (*triangle)[v].position.x);
+			maximum.y = max(maximum.y, (*triangle)[v].position.y);
+			maximum.z = max(maximum.z, (*triangle)[v].position.z);
 		}
 	}
 	this->minimum = minimum;

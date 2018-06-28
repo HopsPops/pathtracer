@@ -38,7 +38,6 @@ std::unique_ptr<Vector3> intersectTriangle(const Ray& ray, const Vector3& vertex
 	}
 	double t = f * Vector3::dot(edge2, q);
 	if (t > EPSILON) {
-//		outIntersectionPoint = rayOrigin + rayVector * t;
 		Vector3* result = new Vector3;
 		*result = rayOrigin + rayVector * t;
 		return std::unique_ptr<Vector3>(result);

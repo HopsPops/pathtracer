@@ -342,6 +342,7 @@ std::ostream& operator<<(std::ostream &stream, const Vector3& vec) {
 	return stream;
 }
 
+
 Vector3 Vector3::copy() const {
 	return Vector3(x, y, z);
 }
@@ -351,4 +352,43 @@ Vector3& Vector3::scale(float factor) {
 	y *= factor;
 	z *= factor;
 	return *this;
+}
+
+Vector3::Vector3() {
+
+}
+
+Vector3::Vector3(float x, float y, float z) {
+	this->x = x;
+	this->y = y;
+	this->z = z;
+}
+
+Vector3::Vector3(const SphericalVector& vec) {
+	this->x = vec.r * sin(vec.phi) * cos(vec.fi);
+	this->y = vec.r * sin(vec.phi) * sin(vec.fi);
+	this->z = vec.r * cos(vec.phi);
+}
+
+SphericalVector::SphericalVector(const Vector3& vec) {
+	this->r = vec.length();
+	this->phi = acos(vec.z / r);
+	this->fi = atan2(vec.y, vec.x);
+}
+
+Vector4::Vector4() {
+
+}
+
+Vector4::Vector4(float x, float y, float z, float w) :
+		x(x), y(y), z(z), w(w) {
+}
+
+Vector4::Vector4(Vector3 v, float w) :
+		x(v.x), y(v.y), z(v.z), w(w) {
+}
+
+std::ostream& operator<<(std::ostream &stream, const SphericalVector& vec) {
+	stream << "{ " << vec.r << ", " << vec.phi << ", " << vec.fi << " }";
+	return stream;
 }

@@ -23,6 +23,7 @@
 
 #include "3dtree.hpp"
 #include <algorithm>
+#include <random>
 
 using namespace std;
 
@@ -285,9 +286,14 @@ void loadModel(string path) {
 	printf("average %lf\n", averageTrianglesPerLeaf(kdTree));
 }
 
+float distribution(float x) {
+	return pow(sin(x), 3.0) / 10.0;
+}
+
 class Line {
 	public:
 		Vector3 v1 { }, v2 { };
+		Vector4 color { 1.0f, 1.0f, 1.0f, 1.0f };
 		float progress = 0.0f;
 };
 
@@ -295,6 +301,10 @@ vector<Line> lines;
 set<const KdTree*> trees { };
 set<const Triangle*> interTriangles { };
 const KdTree* leaf = nullptr;
+
+std::random_device rd;
+std::mt19937 gen(rd());
+std::uniform_real_distribution<float> dis(-1.0, 1.0);
 
 void shotRay(const Ray& ray, const Triangle* origin, int n) {
 	if (n <= 0) {
@@ -307,12 +317,12 @@ void shotRay(const Ray& ray, const Triangle* origin, int n) {
 
 	if (!result->didHit()) {
 		cout << "zero" << endl;
-		lines.push_back(Line { ray.getOrigin(), ray.getOrigin() + 50 * ray.getDirection() });
+		lines.push_back(Line { ray.getOrigin(), ray.getOrigin() + 50 * ray.getDirection(), Vector4 { 0.0f, 0.0f, 0.0f, 1.0f } });
 		return;
 	} else {
 		interTriangles.insert(result->intersectedTriangles.begin(), result->intersectedTriangles.end());
 		trees.insert(result->traversedLeafs.begin(), result->traversedLeafs.end());
-		lines.push_back(Line { ray.getOrigin(), *result->intersectionPoint, 0.0f });
+		lines.push_back(Line { ray.getOrigin(), *result->intersectionPoint, Vector4 { 0.0f, 0.0f, 0.0f, 1.0f } });
 
 //		const Vector3 normal = result->triangle->v1.normal;
 		const Vector3 normal = result->triangle->normal();
@@ -320,6 +330,21 @@ void shotRay(const Ray& ray, const Triangle* origin, int n) {
 //		if(!result->triangle->isCounterclockwise()) {
 //			newDir.negate();
 //		}
+
+		{
+			SphericalVector sv { newDir };
+			float fi = distribution(dis(gen));
+			float phi = distribution(dis(gen));
+			cout << fi << ", " << phi << ", sv: " << sv << ", nsv:";
+			sv.fi += fi;
+			sv.phi += phi;
+			Vector3 secondaryDir = Vector3 {sv}.normalize();
+			cout << sv << ", sdir: " << secondaryDir << endl;
+			if(!result->triangle->isCounterclockwise()) {
+				secondaryDir.negate();
+			}
+			lines.push_back(Line { *result->intersectionPoint + 50 * secondaryDir, *result->intersectionPoint, Vector4 { 0.5f, 0.5f, 1.0f, 1.0f } });
+		}
 
 		cout << "triangle: " << result->triangle->id << ", inters " << *result->intersectionPoint << " raydir: " << ray.getDirection() << ", newdir" << newDir << ", normal " << normal << endl;
 		leaf = result->leaf;
@@ -337,7 +362,6 @@ void mouseButtonCallback(GLFWwindow* win, int button, int action, int mods) {
 		interTriangles.clear();
 		leaf = nullptr;
 		shotRay(ray, nullptr, 10);
-//		trees.erase(unique(trees.begin(), trees.end()), trees.end());
 	}
 }
 
@@ -380,20 +404,20 @@ int main(int argc, char** argv) {
 			renderer->clearDepthBuffer();
 
 			if (window->isButtonPressed(GLFW_KEY_W)) {
-				camera.position = camera.position + (1.0f / 10.0f * camera.getFront());
+				camera.position = camera.position + (1.0f / 20.0f * camera.getFront());
 			}
 			if (window->isButtonPressed(GLFW_KEY_A)) {
 				Vector3 side = Vector3::cross(camera.getFront(), Vector3(0.0f, 1.0f, 0.0f));
 				side.normalize().negate();
-				camera.position = camera.position + (1.0f / 10.0f * side);
+				camera.position = camera.position + (1.0f / 20.0f * side);
 			}
 			if (window->isButtonPressed(GLFW_KEY_S)) {
-				camera.position = camera.position - (1.0f / 10.0f * camera.getFront());
+				camera.position = camera.position - (1.0f / 20.0f * camera.getFront());
 			}
 			if (window->isButtonPressed(GLFW_KEY_D)) {
 				Vector3 side = Vector3::cross(camera.getFront(), Vector3(0.0f, 1.0f, 0.0f));
 				side.normalize();
-				camera.position = camera.position + (1.0f / 10.0f * side);
+				camera.position = camera.position + (1.0f / 20.0f * side);
 			}
 			if (m) {
 				renderer->draw(*om, camera, transformations());
@@ -412,15 +436,16 @@ int main(int argc, char** argv) {
 					line.progress = 1.0f;
 //					line.progress += 0.05f;
 					if (line.progress > 1.0f) line.progress = 1.0f;
-					renderer->drawLine(line.v1, line.v1 + (line.progress * (line.v2 - line.v1)), camera, Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+					renderer->drawLine(line.v1, line.v1 + (line.progress * (line.v2 - line.v1)), camera, line.color);
 					if (line.progress < 1.0f) {
 						break;
 					}
 				}
 
 				for (const KdTree* tree : trees) {
-//					renderer->drawAABB(tree->aabb, camera, Vector4(1.0f, 0.0f, 1.0f, 1.0f));
+//					renderer->drawAABB(tree->getAABB(), camera, Vector4(1.0f, 0.0f, 1.0f, 1.0f));
 					renderer->drawKdTree(tree, camera);
+
 				}
 				for (const Triangle* triangle : interTriangles) {
 //					renderer->drawAABB(tree->aabb, camera, Vector4(1.0f, 0.0f, 1.0f, 1.0f));
@@ -435,8 +460,8 @@ int main(int argc, char** argv) {
 					} else {
 						renderer->drawAABB(leaf->getAABB(), camera, Vector4 { 0.0f, 0.0f, 1.0f, 1.0f });
 					}
-//					renderer->drawKdTree(leaf, camera);
-//					renderer->drawAABB(leaf->aabb, camera, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+					renderer->drawKdTree(leaf, camera);
+//					renderer->drawAABB(leaf->getAABB(), camera, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
 				}
 				renderer->setLineWidth(1.0f);
 			}
