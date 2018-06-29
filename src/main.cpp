@@ -193,28 +193,39 @@ class RaytraceStatistics {
 		RaytraceStatistics() noexcept :tests(0), intersections(0), rays(0) {};
 	};
 
+std::atomic<int> pixelCounter(0);
+//int pixelCounter = 0;
+
 void rt(Model* model, KdTree* tree, unsigned char* data, int h, int n, RaytraceStatistics* stats) {
 	const int w = window->width();
+	const int totalPixels = w * window->height();
 
-	for (int y = h; y < n; y++) {
-		for (int x = 0; x < w; x++) {
+//	for (int y = h; y < n; y++) {
+//		for (int x = 0; x < w; x++) {
+	while (pixelCounter < totalPixels) {
+		int currentPixel = pixelCounter++;
+		int x = currentPixel % w;
+		int y = currentPixel / w;
+		Vector3 color { };
+		const int N = 1500;
+		for (int i = 0; i < N; i++) {
+			Ray ray = Ray::createRay(camera, x, y, w, window->height(), window->aspectRatio());
+			Vector3 result = shotRay(ray, nullptr, 1);
+			color += (1.0 / N) * Vector3 { clamp(result.x), clamp(result.y), clamp(result.z) };
+		}
 
-			Vector3 color { };
-			const int N = 1000;
-			for (int i = 0; i < N; i++) {
-				Ray ray = Ray::createRay(camera, x, y, w, window->height(), window->aspectRatio());
-				Vector3 result = shotRay(ray, nullptr, 1);
-				color += (1.0 / N) * Vector3 { clamp(result.x), clamp(result.y), clamp(result.z) };
-			}
-
-			data[(x + y * w) * 3 + 0] = color.x * 255;
-			data[(x + y * w) * 3 + 1] = color.y * 255;
-			data[(x + y * w) * 3 + 2] = color.z * 255;
+		data[(x + y * w) * 3 + 0] = color.x * 255;
+		data[(x + y * w) * 3 + 1] = color.y * 255;
+		data[(x + y * w) * 3 + 2] = color.z * 255;
+//		}
+		if ((pixelCounter % 100) == 0) {
+			cout << pixelCounter << "/" << (window->height() * w) << endl;
 		}
 	}
 }
 
 void raytrace(Model* model) {
+	pixelCounter = 0;
 	clock_t begin = clock();
 
 	unsigned char data[window->width() * window->height() * 3] = { 0 };
@@ -264,9 +275,9 @@ void loadModel(string path) {
 	printf("average %lf\n", averageTrianglesPerLeaf(kdTree));
 }
 
-float distribution(float x) {
-	return pow(sin(x), 3.0) / 10.0;
-}
+//float distribution(float x) {
+//	return pow(sin(x), 3.0) / 10.0;
+//}
 
 class Line {
 	public:
@@ -281,7 +292,7 @@ class Light {
 		Vector3 color { };
 };
 
-Light light1 = { Vector3 { 2.0f, 2.0f, 0.0f }, Vector3 { .3f, .3f, .3f } };
+Light light1 = { Vector3 { 2.0f, 2.0f, 0.0f }, Vector3 { .4f, .4f, .4f } };
 
 vector<Line> lines;
 set<const KdTree*> trees { };
@@ -290,13 +301,28 @@ const KdTree* leaf = nullptr;
 
 std::random_device rd;
 std::mt19937 gen(rd());
-std::uniform_real_distribution<float> fiDis(-M_PI / 2.0, M_PI / 2.0);
-std::uniform_real_distribution<float> phiDis(-M_PI / 4.0f, M_PI / 4.0f);
+//std::uniform_real_distribution<float> fiDis(-M_PI / 2.0, M_PI / 2.0);
+//std::uniform_real_distribution<float> phiDis(-M_PI / 4.0f, M_PI / 4.0f);
+std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
 
 std::mt19937 genRussianRoulette(rd());
 std::uniform_real_distribution<float> russianRouletteDistribution(0.0f, 1.0f);
 
 Vector3 albedo { .1f, .3f, .3f };
+
+//http://corysimon.github.io/articles/uniformdistn-on-sphere/
+Vector3 randomVectorOnHemisphere(const Vector3& normal) {
+	float theta = 2 * M_PI * distribution(gen);
+	float phi = acos(1 - 2 * distribution(gen));
+	float x = sin(phi) * cos(theta);
+	float y = sin(phi) * sin(theta);
+	float z = cos(phi);
+	Vector3 dir { x, y, z };
+	if (Vector3::dot(normal, dir) < 0.0f) {
+		dir.negate();
+	}
+	return dir.normalize();
+}
 
 Vector3 shotRay(const Ray& ray, const Triangle* origin, int n) {
 	if (n > 11 || (n > 5 && russianRouletteDistribution(genRussianRoulette) > 0.7f)) {
@@ -316,7 +342,8 @@ Vector3 shotRay(const Ray& ray, const Triangle* origin, int n) {
 //		return Vector3 {};
 	} else {
 		const Vector3 intersectionPoint = *traverseResult->intersectionPoint;
-		const Vector3 normal = traverseResult->triangle->normal();
+//		const Vector3 normal = traverseResult->triangle->normal();
+		const Vector3 normal = traverseResult->triangle->v1.normal;
 
 		{
 			Vector3 lightDir = (light1.position - intersectionPoint).normalize();
@@ -328,24 +355,23 @@ Vector3 shotRay(const Ray& ray, const Triangle* origin, int n) {
 			}
 		}
 
-		SphericalVector sv { normal };
-		sv.fi += fiDis(gen);
-		sv.phi += phiDis(gen);
-		Vector3 randomHemisphereDir = Vector3 { sv }.normalize();
+//		SphericalVector sv { normal };
+//		sv.fi += fiDis(gen);
+//		sv.phi += phiDis(gen);
+//		Vector3 randomHemisphereDir = Vector3 { sv }.normalize();
+		Vector3 randomHemisphereDir = randomVectorOnHemisphere(normal);
 
 		Ray newRay { intersectionPoint, randomHemisphereDir };
 //		Vector3 idealReflectionDir = (ray.getDirection() - (2 * Vector3::dot(ray.getDirection(), normal) * normal)).normalize();
 
-
 		float pdf = 1.0 / (2.0f * M_PI);
-		float theta = Vector3::cosineAngle(normal, randomHemisphereDir);
+		float theta = max(0.0f, Vector3::cosineAngle(normal, randomHemisphereDir));
 		indirectLight = theta * shotRay(newRay, traverseResult->triangle, n + 1) / pdf;
-		result = (directLight + indirectLight) / M_PI * albedo;
+		result = (directLight + 2 * indirectLight) / M_PI * albedo;
 //		float pdf = 1.0 / (2.0f * M_PI);
 //		float theta = Vector3::cosineAngle(normal, randomHemisphereDir);
 //		indirectLight = theta * shotRay(newRay, traverseResult->triangle, n + 1) / pdf;
 //		result = (directLight / M_PI + indirectLight) * albedo;
-
 
 //		indirectLight = albedo * shotRay(newRay, traverseResult->triangle, n + 1);
 //		result = directLight + indirectLight;
@@ -500,7 +526,7 @@ int main(int argc, char** argv) {
 					}
 				}
 				renderer->drawPoint(light1.position, camera, Vector4 { 1.0f, 1.0f, 0.0f, 1.0f });
-
+				renderer->drawPoint(Vector3 { }, camera, Vector4 { 0.0f, 0.0f, 0.0f, 1.0f });
 //				for (const KdTree* tree : trees) {
 //					renderer->drawAABB(tree->getAABB(), camera, Vector4(1.0f, 0.0f, 1.0f, 1.0f));
 //					renderer->drawKdTree(tree, camera);

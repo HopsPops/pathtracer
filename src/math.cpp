@@ -387,7 +387,7 @@ Vector3::Vector3(const SphericalVector& vec) {
 SphericalVector::SphericalVector(const Vector3& vec) {
 	this->r = vec.length();
 	this->phi = acos(vec.z / r);
-	this->fi = atan2(vec.y, vec.x);
+	this->fi = atan2(vec.x, vec.y);
 }
 
 Vector4::Vector4() {

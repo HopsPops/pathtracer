@@ -38,8 +38,13 @@ class Camera {
 		}
 
 		//TODO
-		void lookAt(Vector3 v) {
-
+		void lookAt(const Vector3& point) {
+			Vector3 dir = (point - position).normalize();
+//			SphericalVector sph {dir};
+			float pitch = asin(dir.x / cos(asin(dir.y)));;
+			float yaw = asin(dir.y);
+			this->pitch = pitch;
+			this->yaw = yaw;
 		}
 
 		void setUp(Vector3 v) {
