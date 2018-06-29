@@ -39,6 +39,7 @@ KdTree* kdTree;
 Model* m = nullptr;
 Config config;
 Camera camera;
+bool gui = true;
 
 void removeCurrentModel() {
 	if (m != nullptr) {
@@ -56,6 +57,14 @@ void removeCurrentModel() {
 	if (kdTree != nullptr) {
 		delete kdTree;
 		kdTree = nullptr;
+	}
+}
+
+float clamp(float f) {
+	if (f > 1.0f) {
+		return 1.0f;
+	} else {
+		return f;
 	}
 }
 
@@ -191,10 +200,11 @@ void rt(Model* model, KdTree* tree, unsigned char* data, int h, int n, RaytraceS
 		for (int x = 0; x < w; x++) {
 
 			Vector3 color { };
-			int n = 50;
-			for (int i = 0; i < n; i++) {
+			const int N = 1000;
+			for (int i = 0; i < N; i++) {
 				Ray ray = Ray::createRay(camera, x, y, w, window->height(), window->aspectRatio());
-				color = 1.0 / n * shotRay(ray, nullptr, 1);
+				Vector3 result = shotRay(ray, nullptr, 1);
+				color += (1.0 / N) * Vector3 { clamp(result.x), clamp(result.y), clamp(result.z) };
 			}
 
 			data[(x + y * w) * 3 + 0] = color.x * 255;
@@ -271,7 +281,7 @@ class Light {
 		Vector3 color { };
 };
 
-Light light1 = { Vector3 { 2.0f, 2.0f, 0.0f }, Vector3 { 1.0f, 1.0f, 1.0f } };
+Light light1 = { Vector3 { 2.0f, 2.0f, 0.0f }, Vector3 { .3f, .3f, .3f } };
 
 vector<Line> lines;
 set<const KdTree*> trees { };
@@ -286,22 +296,24 @@ std::uniform_real_distribution<float> phiDis(-M_PI / 4.0f, M_PI / 4.0f);
 std::mt19937 genRussianRoulette(rd());
 std::uniform_real_distribution<float> russianRouletteDistribution(0.0f, 1.0f);
 
-Vector3 albedo { 0.0f, 1.0f, 0.0f };
+Vector3 albedo { .1f, .3f, .3f };
 
 Vector3 shotRay(const Ray& ray, const Triangle* origin, int n) {
-	if (n > 11 || (n > 2 && russianRouletteDistribution(genRussianRoulette) > 0.7f)) {
-		return Vector3 { 0.0f, 0.0f, 0.0f };
+	if (n > 11 || (n > 5 && russianRouletteDistribution(genRussianRoulette) > 0.7f)) {
+//		return Vector3 { 0.75f, 0.7f, 0.7f }; //background
+		return Vector3 { };
 	}
 
 	unique_ptr<KdTreeTraversalResult> traverseResult(new KdTreeTraversalResult);
 
 	find(kdTree, ray, origin, traverseResult.get());
-	Vector3 result {};
+	Vector3 result { };
 	Vector3 directLight { };
 	Vector3 indirectLight { };
 
 	if (!traverseResult->didHit()) {
-		return Vector3 { 0.75f, 0.7f, 0.7f };
+		return Vector3 { 0.75f, 0.7f, 0.7f }; //background
+//		return Vector3 {};
 	} else {
 		const Vector3 intersectionPoint = *traverseResult->intersectionPoint;
 		const Vector3 normal = traverseResult->triangle->normal();
@@ -310,7 +322,9 @@ Vector3 shotRay(const Ray& ray, const Triangle* origin, int n) {
 			Vector3 lightDir = (light1.position - intersectionPoint).normalize();
 			Ray lightRay { intersectionPoint, lightDir };
 			if (!findAny(kdTree, lightRay, traverseResult->triangle)) {
-				directLight = Vector3::cosineAngle(lightDir, normal) * light1.color;
+				directLight = max(0.0f, Vector3::cosineAngle(normal, lightDir)) * light1.color;
+//				directLight = Vector3::cosineAngle(normal, lightDir) * light1.color;
+//				directLight = light1.color;
 			}
 		}
 
@@ -321,13 +335,25 @@ Vector3 shotRay(const Ray& ray, const Triangle* origin, int n) {
 
 		Ray newRay { intersectionPoint, randomHemisphereDir };
 //		Vector3 idealReflectionDir = (ray.getDirection() - (2 * Vector3::dot(ray.getDirection(), normal) * normal)).normalize();
+
+
 		float pdf = 1.0 / (2.0f * M_PI);
 		float theta = Vector3::cosineAngle(normal, randomHemisphereDir);
-		indirectLight += theta * shotRay(newRay, traverseResult->triangle, n + 1) / pdf;
+		indirectLight = theta * shotRay(newRay, traverseResult->triangle, n + 1) / pdf;
+		result = (directLight + indirectLight) / M_PI * albedo;
+//		float pdf = 1.0 / (2.0f * M_PI);
+//		float theta = Vector3::cosineAngle(normal, randomHemisphereDir);
+//		indirectLight = theta * shotRay(newRay, traverseResult->triangle, n + 1) / pdf;
+//		result = (directLight / M_PI + indirectLight) * albedo;
 
-		result = (directLight / M_PI + 2 * indirectLight) * albedo;
+
+//		indirectLight = albedo * shotRay(newRay, traverseResult->triangle, n + 1);
+//		result = directLight + indirectLight;
 //		shotRay(Ray { intersectionPoint, randomHemisphereDir }, traverseResult->triangle, n + 1)
 	}
+//	if(n == 1) {
+//		cout << "indirect: " << indirectLight << ", direct: " << directLight << ", result: " << result << endl;
+//	}
 	return result;
 }
 
@@ -389,7 +415,7 @@ void mouseButtonCallback(GLFWwindow* win, int button, int action, int mods) {
 		trees.clear();
 		interTriangles.clear();
 		leaf = nullptr;
-		cout << shotRay(ray, nullptr, 1) << endl;
+//		cout << shotRay(ray, nullptr, 1) << endl;
 	}
 }
 
@@ -397,13 +423,17 @@ int main(int argc, char** argv) {
 	if (!loadConfig(argv[1], config)) {
 		cout << "unable to load config file\n" << endl;
 	}
+//	if(strcmp(argv[2], "batch") == 0) {
+//		gui = false;
+//	}
+
 	config.print(cout);
 
 	camera.setPosition(config.viewPoint);
 	camera.lookAt(config.lookAt);
 	camera.setUp(config.up);
 
-	window = Window::createWindow();
+	window = Window::createWindow(config.xres, config.yres);
 	window->setFramebufferSizeCallback(framebufferSizeCallback);
 //	window->setScrollCallback(scrollCallback);
 	window->setDropCallback(dropCallback);

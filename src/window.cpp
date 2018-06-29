@@ -6,10 +6,7 @@
 
 using namespace std;
 
-const unsigned int DEFAULT_WIDTH = 800;
-const unsigned int DEFEULT_HEIGHT = 600;
-
-unique_ptr<Window> Window::createWindow() {
+unique_ptr<Window> Window::createWindow(int width, int height) {
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -17,7 +14,7 @@ unique_ptr<Window> Window::createWindow() {
 	glfwWindowHint(GLFW_SAMPLES, 4);
 
 	Window* w = new Window();
-	w->handle = glfwCreateWindow(DEFAULT_WIDTH, DEFEULT_HEIGHT, "", NULL, NULL);
+	w->handle = glfwCreateWindow(width, height, "", NULL, NULL);
 	if (w->handle == NULL) {
 		std::cout << "Failed to create GLFW window" << std::endl;
 		glfwTerminate();

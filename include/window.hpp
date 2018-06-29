@@ -8,7 +8,7 @@ class Window {
 	private:
 		GLFWwindow* handle = nullptr;
 		public:
-		static std::unique_ptr<Window> createWindow();
+		static std::unique_ptr<Window> createWindow(int, int);
 		void setTitle(const char*);
 		int width();
 		int height();
