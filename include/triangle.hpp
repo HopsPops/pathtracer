@@ -9,6 +9,9 @@ class Triangle {
 		Vertex v1;
 		Vertex v2;
 		Vertex v3;
+//		Matrix4x4* p = nullptr;
+		Vector3 tangent1 {};
+		Vector3 tangent2 {};
 
 		Vector3 middle();
 		const Vertex& operator[](int i) const;
@@ -23,12 +26,8 @@ class Triangle {
 		}
 
 		Vector3 normal() const {
-			Vector3 v1 = this->v1.position;
-			Vector3 v2 = this->v2.position;
-			Vector3 v3 = this->v3.position;
-
-			Vector3 u = v2 - v1;
-			Vector3 v = v3 - v1;
+			const Vector3& u = tangent1;
+			const Vector3& v = tangent2;
 
 			Vector3 n { u.y * v.z - u.z * v.y, u.z * v.x - u.x * v.z, u.x * v.y - u.y * v.x };
 			n.normalize();

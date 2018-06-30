@@ -6,9 +6,9 @@ class AABB {
 	private:
 	public:
 		Vector3 minimum, maximum;
-		AABB(Vector3, Vector3);
+		AABB(const Vector3&, const Vector3&);
 		AABB(const Triangles&);
 		AABB();
-		Vector3 getMin() const;
-		Vector3 getMax() const;
+		const Vector3& getMin() const;
+		const Vector3& getMax() const;
 };

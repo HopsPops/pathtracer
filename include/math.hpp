@@ -32,23 +32,24 @@ class Vector3 {
 		Vector3& scale(float);
 		float length() const;
 
-		Vector3();
+
+		Vector3() = default;
 		Vector3(float x, float y, float z);
 		Vector3(const SphericalVector&);
 
 		static float cosineAngle(const Vector3&, const Vector3&);
 
-		static float dot(Vector3, Vector3);
-		static Vector3 cross(Vector3, Vector3);
-		static float distance(Vector3, Vector3);
-		Vector3 operator-(Vector3) const;
+		static float dot(const Vector3&, const Vector3&);
+		static Vector3 cross(const Vector3&, const Vector3&);
+		static float distance(const Vector3&, const Vector3&);
+		Vector3 operator-(const Vector3&) const;
 		Vector3 operator/(float) const;
-		Vector3 operator+(Vector3) const;
+		Vector3 operator+(const Vector3&) const;
 		float operator [](int i) const;
 		float* operator [](int i);
 		Vector3 copy() const;
 
-		const Vector3 operator=(const Vector3&);
+//		const Vector3& operator=(const Vector3&) = default;
 		const Vector3& operator+=(const Vector3&);
 		bool isZero() const;
 		friend std::ostream& operator<<(std::ostream&, const Vector3&);
@@ -64,9 +65,9 @@ class SphericalVector {
 		friend std::ostream& operator<<(std::ostream&, const SphericalVector&);
 };
 
-Vector3 operator*(float, Vector3);
-Vector3 operator*(Vector3, float);
-Vector3 operator*(Vector3, Vector3);
+Vector3 operator*(float, const Vector3&);
+Vector3 operator*(const Vector3&, float);
+Vector3 operator*(const Vector3&, const Vector3&);
 //Vector3 operator-(Vector3, Vector3);
 
 class Vector4 {
@@ -94,6 +95,7 @@ class Matrix4x4 {
 		;
 
 	public:
+		Matrix4x4(std::array<float, 16> data);
 		static Matrix4x4 zeroMatrix();
 		static Matrix4x4 identityMatrix();
 		static Matrix4x4 translationMatrix(Vector3);

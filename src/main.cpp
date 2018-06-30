@@ -24,12 +24,13 @@
 #include "3dtree.hpp"
 #include <algorithm>
 #include <random>
+#include <mutex>
 
 using namespace std;
 
 void raytrace(Model*);
 void loadModel(string);
-Vector3 shotRay(const Ray&, const Triangle*, int);
+Vector3 shotRay(const Ray&, int, int);
 
 unique_ptr<Window> window;
 Renderer* renderer;
@@ -76,9 +77,38 @@ Triangles* modelToTriangles(Model* model, Matrix4x4 transformation) {
 		for (unsigned int i = 0; i < mesh.indices.size();) {
 			Triangle* triangle = new Triangle;
 			triangle->id = id++;
-			triangle->v1 = {mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
-			triangle->v2 = {mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
-			triangle->v3 = {mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
+//			triangle->v1 = {mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
+//			triangle->v2 = {mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
+//			triangle->v3 = {mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
+
+			Vertex va { mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]] };
+			Vertex vb { mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]] };
+			Vertex vc { mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]] };
+
+			triangle->v1 = va;
+			triangle->v2 = vb;
+			triangle->v3 = vc;
+
+			Vector3 a = va.position;
+			Vector3 b = vb.position;
+			Vector3 c = vc.position;
+
+			Vector3 ab = b - a;
+			Vector3 ac = c - a;
+			triangle->tangent1 = ab;
+			triangle->tangent2 = ac;
+//			Vector3 n = Vector3::cross(ab, ac);
+//
+//			std::array<float, 16> data {
+//				ab.x, ac.x, n.x, a.x,
+//				ab.y, ac.y, n.y, a.y,
+//				ab.z, ac.z, n.z, a.z,
+//				0, 0, 0, 1,
+//			};
+//			Matrix4x4* p = new Matrix4x4(data);
+//			*p = p->inverse();
+//			triangle->p = p;
+
 //			triangle.v1 = {Matrix4x4::multiply(transformation, mesh.positions[mesh.indices[i]], 1.0f), mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
 //			triangle.v2 = {Matrix4x4::multiply(transformation, mesh.positions[mesh.indices[i]], 1.0f), mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
 //			triangle.v3 = {Matrix4x4::multiply(transformation, mesh.positions[mesh.indices[i]], 1.0f), mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
@@ -196,30 +226,31 @@ class RaytraceStatistics {
 std::atomic<int> pixelCounter(0);
 //int pixelCounter = 0;
 
+std::mutex mut;
+
 void rt(Model* model, KdTree* tree, unsigned char* data, int h, int n, RaytraceStatistics* stats) {
 	const int w = window->width();
 	const int totalPixels = w * window->height();
 
-//	for (int y = h; y < n; y++) {
-//		for (int x = 0; x < w; x++) {
 	while (pixelCounter < totalPixels) {
-		int currentPixel = pixelCounter++;
+		int currentPixel = pixelCounter.fetch_add(1);
 		int x = currentPixel % w;
 		int y = currentPixel / w;
 		Vector3 color { };
-		const int N = 1500;
+		const int N = 20;
 		for (int i = 0; i < N; i++) {
 			Ray ray = Ray::createRay(camera, x, y, w, window->height(), window->aspectRatio());
-			Vector3 result = shotRay(ray, nullptr, 1);
+			Vector3 result = shotRay(ray, -1, 1);
 			color += (1.0 / N) * Vector3 { clamp(result.x), clamp(result.y), clamp(result.z) };
 		}
 
 		data[(x + y * w) * 3 + 0] = color.x * 255;
 		data[(x + y * w) * 3 + 1] = color.y * 255;
 		data[(x + y * w) * 3 + 2] = color.z * 255;
-//		}
-		if ((pixelCounter % 100) == 0) {
-			cout << pixelCounter << "/" << (window->height() * w) << endl;
+
+		if (((pixelCounter % 100) == 0) && mut.try_lock()) {
+			cout << (double) pixelCounter / (window->height() * w) * 100.0 << "%" << endl;
+			mut.unlock();
 		}
 	}
 }
@@ -229,7 +260,7 @@ void raytrace(Model* model) {
 	clock_t begin = clock();
 
 	unsigned char data[window->width() * window->height() * 3] = { 0 };
-	const int q = std::thread::hardware_concurrency();
+	const int q = max(1, (int) std::thread::hardware_concurrency() - 1);
 	vector<thread> threads;
 	int h = window->height();
 
@@ -275,10 +306,6 @@ void loadModel(string path) {
 	printf("average %lf\n", averageTrianglesPerLeaf(kdTree));
 }
 
-//float distribution(float x) {
-//	return pow(sin(x), 3.0) / 10.0;
-//}
-
 class Line {
 	public:
 		Vector3 v1 { }, v2 { };
@@ -292,7 +319,8 @@ class Light {
 		Vector3 color { };
 };
 
-Light light1 = { Vector3 { 2.0f, 2.0f, 0.0f }, Vector3 { .4f, .4f, .4f } };
+//Light light1 = { Vector3 { 2.0f, 2.0f, 0.0f }, Vector3 { .4f, .4f, .4f } };
+Light light1 = { Vector3 { 0.0f, 1.90f, 0.0f }, Vector3 { .4f, .4f, .4f } };
 
 vector<Line> lines;
 set<const KdTree*> trees { };
@@ -301,14 +329,12 @@ const KdTree* leaf = nullptr;
 
 std::random_device rd;
 std::mt19937 gen(rd());
-//std::uniform_real_distribution<float> fiDis(-M_PI / 2.0, M_PI / 2.0);
-//std::uniform_real_distribution<float> phiDis(-M_PI / 4.0f, M_PI / 4.0f);
 std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
 
 std::mt19937 genRussianRoulette(rd());
 std::uniform_real_distribution<float> russianRouletteDistribution(0.0f, 1.0f);
 
-Vector3 albedo { .1f, .3f, .3f };
+Vector3 albedo { .3f, .3f, .3f };
 
 //http://corysimon.github.io/articles/uniformdistn-on-sphere/
 Vector3 randomVectorOnHemisphere(const Vector3& normal) {
@@ -324,7 +350,7 @@ Vector3 randomVectorOnHemisphere(const Vector3& normal) {
 	return dir.normalize();
 }
 
-Vector3 shotRay(const Ray& ray, const Triangle* origin, int n) {
+Vector3 shotRay(const Ray& ray, int origin, int n) {
 	if (n > 11 || (n > 5 && russianRouletteDistribution(genRussianRoulette) > 0.7f)) {
 //		return Vector3 { 0.75f, 0.7f, 0.7f }; //background
 		return Vector3 { };
@@ -342,8 +368,8 @@ Vector3 shotRay(const Ray& ray, const Triangle* origin, int n) {
 //		return Vector3 {};
 	} else {
 		const Vector3 intersectionPoint = *traverseResult->intersectionPoint;
-//		const Vector3 normal = traverseResult->triangle->normal();
-		const Vector3 normal = traverseResult->triangle->v1.normal;
+		const Vector3 normal = traverseResult->triangle->normal();
+//		const Vector3 normal = traverseResult->triangle->v1.normal;
 
 		{
 			Vector3 lightDir = (light1.position - intersectionPoint).normalize();
@@ -366,7 +392,7 @@ Vector3 shotRay(const Ray& ray, const Triangle* origin, int n) {
 
 		float pdf = 1.0 / (2.0f * M_PI);
 		float theta = max(0.0f, Vector3::cosineAngle(normal, randomHemisphereDir));
-		indirectLight = theta * shotRay(newRay, traverseResult->triangle, n + 1) / pdf;
+		indirectLight = theta * shotRay(newRay, traverseResult->triangle->id, n + 1) / pdf;
 		result = (directLight + 2 * indirectLight) / M_PI * albedo;
 //		float pdf = 1.0 / (2.0f * M_PI);
 //		float theta = Vector3::cosineAngle(normal, randomHemisphereDir);
@@ -441,7 +467,7 @@ void mouseButtonCallback(GLFWwindow* win, int button, int action, int mods) {
 		trees.clear();
 		interTriangles.clear();
 		leaf = nullptr;
-//		cout << shotRay(ray, nullptr, 1) << endl;
+		cout << shotRay(ray, -1, 1) << endl;
 	}
 }
 

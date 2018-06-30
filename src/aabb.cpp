@@ -7,16 +7,16 @@ AABB::AABB() {
 	this->maximum = Vector3(0.0f, 0.0f, 0.0f);
 }
 
-AABB::AABB(Vector3 min, Vector3 max) {
+AABB::AABB(const Vector3& min, const Vector3& max) {
 	this->minimum = min;
 	this->maximum = max;
 }
 
-Vector3 AABB::getMin() const {
+const Vector3& AABB::getMin() const {
 	return minimum;
 }
 
-Vector3 AABB::getMax() const {
+const Vector3& AABB::getMax() const {
 	return maximum;
 }
 

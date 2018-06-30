@@ -225,19 +225,19 @@ float Vector3::length() const {
 	return sqrt(x * x + y * y + z * z);
 }
 
-float Vector3::dot(Vector3 v1, Vector3 v2) {
+float Vector3::dot(const Vector3& v1, const Vector3& v2) {
 	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
 }
 
-Vector3 Vector3::cross(Vector3 v1, Vector3 v2) {
+Vector3 Vector3::cross(const Vector3& v1, const Vector3& v2) {
 	return Vector3(v1.y * v2.z - v1.z * v2.y, v1.z * v2.x - v1.x * v2.z, v1.x * v2.y - v1.y * v2.x);
 }
 
-Vector3 Vector3::operator -(Vector3 v) const {
+Vector3 Vector3::operator -(const Vector3& v) const {
 	return Vector3(x - v.x, y - v.y, z - v.z);
 }
 
-Vector3 Vector3::operator +(Vector3 v) const {
+Vector3 Vector3::operator +(const Vector3& v) const {
 	return Vector3(x + v.x, y + v.y, z + v.z);
 }
 
@@ -266,16 +266,20 @@ Matrix4x4 Matrix4x4::transpose() {
 	return result;
 }
 
+Matrix4x4::Matrix4x4(std::array<float, 16> data) {
+	this->data = data;
+}
+
 Vector4 Matrix4x4::operator *(const Vector4& v) {
 	return multiply(*this, v);
 }
 
-const Vector3 Vector3::operator =(const Vector3& v) {
-	x = v.x;
-	y = v.y;
-	z = v.z;
-	return *this;
-}
+//const Vector3 Vector3::operator =(const Vector3& v) {
+//	x = v.x;
+//	y = v.y;
+//	z = v.z;
+//	return *this;
+//}
 
 const Vector4 Vector4::operator =(const Vector4& v) {
 	x = v.x;
@@ -289,7 +293,7 @@ Vector4::operator Vector3() const {
 	return Vector3(x, y, z);
 }
 
-float Vector3::distance(Vector3 v1, Vector3 v2) {
+float Vector3::distance(const Vector3& v1, const Vector3& v2) {
 	Vector3 sub = v2 - v1;
 	return sub.length();
 }
@@ -301,11 +305,11 @@ Vector3& Vector3::negate() {
 	return *this;
 }
 
-Vector3 operator *(float factor, Vector3 vector) {
+Vector3 operator *(float factor, const Vector3& vector) {
 	return Vector3(vector.x * factor, vector.y * factor, vector.z * factor);
 }
 
-Vector3 operator *(Vector3 vector, float factor) {
+Vector3 operator *(const Vector3& vector, float factor) {
 	return Vector3(vector.x * factor, vector.y * factor, vector.z * factor);
 }
 
@@ -368,9 +372,9 @@ Vector3& Vector3::scale(float factor) {
 	return *this;
 }
 
-Vector3::Vector3() {
-
-}
+//Vector3::Vector3() {
+//
+//}
 
 Vector3::Vector3(float x, float y, float z) {
 	this->x = x;
@@ -407,9 +411,10 @@ std::ostream& operator<<(std::ostream &stream, const SphericalVector& vec) {
 	return stream;
 }
 
-Vector3 operator *(Vector3 v1, Vector3 v2) {
+Vector3 operator *(const Vector3& v1, const Vector3& v2) {
 	return Vector3 { v1.x * v2.x, v1.y * v2.y, v1.z * v2.z };
 }
+
 //
 //Vector3 operator -(Vector3 v1, Vector3 v2) {
 //	return Vector(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z);

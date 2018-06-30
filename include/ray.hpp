@@ -11,11 +11,11 @@ class Ray {
 	public:
 		Ray(Vector3 origin, Vector3 direction);
 
-		static Ray createRay(Camera&, int, int, int, int, double);
+		static Ray createRay(const Camera&, int, int, int, int, double);
 
-		Vector3 getOrigin() const;
+		const Vector3& getOrigin() const;
 
-		Vector3 getDirection() const;
+		const Vector3& getDirection() const;
 
 		void print(std::ostream& stream);
 };

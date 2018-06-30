@@ -55,7 +55,7 @@ class KdTree {
 			this->axis = axis;
 			this->aabb = AABB(triangles);
 
-			if (triangles.size() > 32) {
+			if (triangles.size() > 16) {
 				PartitionResult splited = partition(triangles, this->axis);
 				this->left = new KdTree(splited.left, static_cast<Axis>((this->axis + 1) % 3));
 				this->right = new KdTree(splited.right, static_cast<Axis>((this->axis + 1) % 3));
@@ -65,7 +65,7 @@ class KdTree {
 		}
 
 		bool isLeaf() const {
-			assert(((left == nullptr) ^ (right == nullptr)) == 0);
+//			assert(((left == nullptr) ^ (right == nullptr)) == 0);
 			return left == nullptr || right == nullptr;
 		}
 
@@ -144,13 +144,15 @@ class KdTreeTraversalResult {
 		}
 
 };
-bool find(const KdTree* tree, const Ray& ray, const Triangle* origin, KdTreeTraversalResult* result, double* d) {
+bool find(const KdTree* tree, const Ray& ray, int origin, KdTreeTraversalResult* result, double* d) {
 	if (intersectAABB(ray, tree->getAABB())) {
 		if (tree->isLeaf()) {
+#ifdef DEBUG
 			result->traversedLeafs.insert(tree);
+#endif
 			bool found = false;
 			for (const Triangle* triangle : tree->getTriangles()) {
-				if (origin && (origin->id == triangle->id)) {
+				if (origin == triangle->id) {
 					continue;
 				}
 
@@ -158,7 +160,9 @@ bool find(const KdTree* tree, const Ray& ray, const Triangle* origin, KdTreeTrav
 				if (!intersection) {
 					continue;
 				}
+#ifdef DEBUG
 				result->intersectedTriangles.insert(triangle);
+#endif
 
 				double dist = Vector3::distance(ray.getOrigin(), *intersection);
 
@@ -180,7 +184,7 @@ bool find(const KdTree* tree, const Ray& ray, const Triangle* origin, KdTreeTrav
 	}
 }
 
-bool find(const KdTree* tree, const Ray& ray, const Triangle* origin, KdTreeTraversalResult* result) {
+bool find(const KdTree* tree, const Ray& ray, int origin, KdTreeTraversalResult* result) {
 	double d = INFINITY;
 	return find(tree, ray, origin, result, &d);
 }

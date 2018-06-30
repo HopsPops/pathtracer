@@ -4,7 +4,7 @@ Ray::Ray(Vector3 origin, Vector3 direction) :
 		origin(origin), direction(direction.normalize()) {
 };
 
-Ray Ray::createRay(Camera& c, int screenX, int screenY, int width, int height, double aspectRatio) {
+Ray Ray::createRay(const Camera& c, int screenX, int screenY, int width, int height, double aspectRatio) {
 	float x = (2.0f * screenX) / width - 1.0f;
 	float y = 1.0f - (2.0f * screenY) / height;
 
@@ -23,11 +23,11 @@ Ray Ray::createRay(Camera& c, int screenX, int screenY, int width, int height, d
 	return Ray(c.getPosition(), ((Vector3) rayWorld).normalize());
 }
 
-Vector3 Ray::getOrigin() const {
+const Vector3& Ray::getOrigin() const {
 	return origin;
 }
 
-Vector3 Ray::getDirection() const {
+const Vector3& Ray::getDirection() const {
 	return direction;
 }
 
