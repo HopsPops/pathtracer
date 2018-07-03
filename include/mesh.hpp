@@ -21,14 +21,16 @@ class Mesh {
 		vector<Vector3> normals;
 		vector<unsigned int> indices;
 		vector<Texture> textures;
+		Material material {};
 		AABB bounding;
 
-		Mesh(vector<Vector3> positions, vector<Vector2> texcoords, vector<Vector3> normals, vector<unsigned int> indices, vector<Texture> textures) {
+		Mesh(vector<Vector3> positions, vector<Vector2> texcoords, vector<Vector3> normals, vector<unsigned int> indices, vector<Texture> textures, Material material) {
 			this->positions = positions;
 			this->texcoords = texcoords;
 			this->normals = normals;
 			this->indices = indices;
 			this->textures = textures;
+			this->material = material;
 
 			bounding = boundingBox();
 		}

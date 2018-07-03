@@ -333,9 +333,12 @@ class Renderer {
 		}
 
 		void draw(const OpenglModel& m, const Camera& camera, const Matrix4x4& model) {
-			for (unsigned int i = 0; i < m.getMeshes().size(); i++) {
-				draw(m.getMeshes()[i], camera, model);
+			for(const OpenglMesh& mesh : m.getMeshes()) {
+				draw(mesh, camera, model);
 			}
+//			for (unsigned int i = 0; i < m.getMeshes().size(); i++) {
+//				draw(m.getMeshes()[i], camera, model);
+//			}
 		}
 
 		void drawKdTree(const KdTree* tree, const Camera& camera) {

@@ -48,12 +48,19 @@ class Vector3 {
 		float operator [](int i) const;
 		float* operator [](int i);
 		Vector3 copy() const;
+		Vector3 reflection(const Vector3& dir, const Vector3& normal);
 
 //		const Vector3& operator=(const Vector3&) = default;
 		const Vector3& operator+=(const Vector3&);
 		bool isZero() const;
 		friend std::ostream& operator<<(std::ostream&, const Vector3&);
 };
+
+struct Material {
+		Vector3 diffuse {};
+		Vector3 emmisive {};
+};
+
 
 class SphericalVector {
 	public:

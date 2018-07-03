@@ -225,12 +225,24 @@ float Vector3::length() const {
 	return sqrt(x * x + y * y + z * z);
 }
 
+//#include <smmintrin.h>
 float Vector3::dot(const Vector3& v1, const Vector3& v2) {
 	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+//	__m128 a = _mm_setr_ps(v1.x, v1.y, v1.z, 0.0f);
+//	__m128 b = _mm_setr_ps(v2.x, v2.y, v2.z, 0.0f);
+//	__m128 res = _mm_dp_ps(a, b, 119);
+//	float result = res[0];
+//	return result;
 }
 
 Vector3 Vector3::cross(const Vector3& v1, const Vector3& v2) {
 	return Vector3(v1.y * v2.z - v1.z * v2.y, v1.z * v2.x - v1.x * v2.z, v1.x * v2.y - v1.y * v2.x);
+//	__m128 a = _mm_setr_ps(v1.x, v1.y, v1.z, 0.0f);
+//	__m128 b = _mm_setr_ps(v2.x, v2.y, v2.z, 0.0f);
+//	__m128 result = _mm_sub_ps(
+//			_mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 0, 2, 1)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 1, 0, 2))),
+//			_mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 1, 0, 2)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 0, 2, 1))));
+//	return Vector3 { result[0], result[1], result[2] };
 }
 
 Vector3 Vector3::operator -(const Vector3& v) const {
@@ -325,7 +337,7 @@ float Vector3::operator [](int i) const {
 	} else if (i == 2) {
 		return z;
 	} else {
-		throw std::invalid_argument("i > 2");
+		return operator [](i % 3);
 	}
 }
 
@@ -354,6 +366,10 @@ const Vector3& Vector3::operator +=(const Vector3& v) {
 
 Vector3 Vector3::operator /(float factor) const {
 	return Vector3 { x / factor, y / factor, z / factor };
+}
+
+Vector3 Vector3::reflection(const Vector3& dir, const Vector3& normal) {
+	return (dir - (2 * Vector3::dot(dir, normal) * normal)).normalize();
 }
 
 std::ostream& operator<<(std::ostream &stream, const Vector3& vec) {

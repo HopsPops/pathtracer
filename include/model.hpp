@@ -25,7 +25,8 @@ class Model {
 		bool gammaCorrection;
 		AABB bounding;
 
-		Model(string const &path, bool gamma = false) : gammaCorrection(gamma) {
+		Model(string const &path, bool gamma = false) :
+				gammaCorrection(gamma) {
 			loadModel(path);
 		}
 
@@ -115,7 +116,7 @@ class Model {
 				}
 				if (m->mTextureCoords[0]) {
 					Vector2 texcoord { m->mTextureCoords[0][i].x, m->mTextureCoords[0][i].y };
-					texcoords.push_back( texcoord );
+					texcoords.push_back(texcoord);
 				} else {
 					texcoords.push_back(Vector2());
 				}
@@ -126,20 +127,30 @@ class Model {
 					indices.push_back(face.mIndices[j]);
 				}
 			}
-			aiMaterial* material = scene->mMaterials[m->mMaterialIndex];
+			aiMaterial* assimpMaterial = scene->mMaterials[m->mMaterialIndex];
 
-			vector<Texture> diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
+			vector<Texture> diffuseMaps = loadMaterialTextures(assimpMaterial, aiTextureType_DIFFUSE, "texture_diffuse");
 			textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
 
-			vector<Texture> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
+			vector<Texture> specularMaps = loadMaterialTextures(assimpMaterial, aiTextureType_SPECULAR, "texture_specular");
 			textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
 
-			std::vector<Texture> normalMaps = loadMaterialTextures(material, aiTextureType_HEIGHT, "texture_normal");
+			std::vector<Texture> normalMaps = loadMaterialTextures(assimpMaterial, aiTextureType_HEIGHT, "texture_normal");
 			textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
 
-			std::vector<Texture> heightMaps = loadMaterialTextures(material, aiTextureType_AMBIENT, "texture_height");
+			std::vector<Texture> heightMaps = loadMaterialTextures(assimpMaterial, aiTextureType_AMBIENT, "texture_height");
 			textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
-			Mesh mesh(positions, texcoords, normals, indices, textures);
+
+			aiColor4D colorDiffuse(0.f, 0.f, 0.f, 0.f);
+			aiGetMaterialColor(assimpMaterial, AI_MATKEY_COLOR_DIFFUSE, &colorDiffuse);
+
+			aiColor4D colorEmissive(0.f, 0.f, 0.f, 0.f);
+			aiGetMaterialColor(assimpMaterial, AI_MATKEY_COLOR_EMISSIVE, &colorEmissive);
+
+			Material material { Vector3 { colorDiffuse.r, colorDiffuse.g, colorDiffuse.b }, Vector3 { colorEmissive.r, colorEmissive.g, colorEmissive.b } };
+			cout << "DIFFUSE " << material.diffuse << endl;
+
+			Mesh mesh(positions, texcoords, normals, indices, textures, material);
 
 			return mesh;
 		}

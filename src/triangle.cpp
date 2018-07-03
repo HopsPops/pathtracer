@@ -18,11 +18,11 @@ const Vertex& Triangle::operator [](int i) const {
 	} else if (i == 2) {
 		return v3;
 	} else {
-		throw std::invalid_argument("i > 2");
+		return operator [](i % 3);
 	}
 }
 
-double trianglesMedian(const Triangles& triangles, int axis) {
+float trianglesMedian(const Triangles& triangles, int axis) {
 	double median = 0.0;
 
 	for (const Triangle* triangle : triangles) {
@@ -34,3 +34,10 @@ double trianglesMedian(const Triangles& triangles, int axis) {
 	return median;
 }
 
+//float trianglesMin(const Triangles& allocator, int int1) {
+//
+//}
+//
+//float trianglesMax(const Triangles& allocator, int int1)
+//		{
+//}

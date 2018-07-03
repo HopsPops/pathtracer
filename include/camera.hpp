@@ -40,11 +40,23 @@ class Camera {
 		//TODO
 		void lookAt(const Vector3& point) {
 			Vector3 dir = (point - position).normalize();
-//			SphericalVector sph {dir};
-			float pitch = asin(dir.x / cos(asin(dir.y)));;
-			float yaw = asin(dir.y);
-			this->pitch = pitch;
+
+			float yaw = 0.0f;
+//			if (dir.x == 0.0f && dir.y == 0.0f) {
+//				yaw = 0.0f;
+//			} else {
+				yaw = atan2(dir.x, -dir.y);
+//			}
 			this->yaw = yaw;
+
+			float pitch = 0.0f;
+//			if (dir.x == 0.0f && dir.y == 0.0f && dir.z == 0.0f) {
+//				pitch = 0.0f;
+//			} else {
+				pitch = atan2(sqrt(dir.x * dir.x + dir.y * dir.y), dir.z);
+//			}
+			this->pitch = pitch;
+
 		}
 
 		void setUp(Vector3 v) {

@@ -28,7 +28,7 @@
 
 using namespace std;
 
-void raytrace(Model*);
+void raytrace(Model*, int, int);
 void loadModel(string);
 Vector3 shotRay(const Ray&, int, int);
 
@@ -40,7 +40,6 @@ KdTree* kdTree;
 Model* m = nullptr;
 Config config;
 Camera camera;
-bool gui = true;
 
 void removeCurrentModel() {
 	if (m != nullptr) {
@@ -75,19 +74,23 @@ Triangles* modelToTriangles(Model* model, Matrix4x4 transformation) {
 	unsigned int id = 0;
 	for (const Mesh& mesh : model->meshes) {
 		for (unsigned int i = 0; i < mesh.indices.size();) {
-			Triangle* triangle = new Triangle;
-			triangle->id = id++;
+//			Triangle* triangle = new Triangle;
+//			triangle->id = id++;
 //			triangle->v1 = {mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
 //			triangle->v2 = {mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
 //			triangle->v3 = {mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]]};
 
-			Vertex va { mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]] };
-			Vertex vb { mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]] };
-			Vertex vc { mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]] };
+//			Vertex va { mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]] };
+//			Vertex vb { mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]] };
+//			Vertex vc { mesh.positions[mesh.indices[i]], mesh.normals[mesh.indices[i]], mesh.texcoords[mesh.indices[i++]] };
+			Vertex va { mesh.positions[mesh.indices[i++]] };
+			Vertex vb { mesh.positions[mesh.indices[i++]] };
+			Vertex vc { mesh.positions[mesh.indices[i++]] };
 
-			triangle->v1 = va;
-			triangle->v2 = vb;
-			triangle->v3 = vc;
+//			triangle->v1 = va;
+//			triangle->v2 = vb;
+//			triangle->v3 = vc;
+//			triangle->material = &mesh.material;
 
 			Vector3 a = va.position;
 			Vector3 b = vb.position;
@@ -95,8 +98,9 @@ Triangles* modelToTriangles(Model* model, Matrix4x4 transformation) {
 
 			Vector3 ab = b - a;
 			Vector3 ac = c - a;
-			triangle->tangent1 = ab;
-			triangle->tangent2 = ac;
+//			triangle->tangent1 = ab;
+//			triangle->tangent2 = ac;
+			Triangle* triangle = new Triangle(id++, va,vb,vc, ab, ac, &mesh.material);
 //			Vector3 n = Vector3::cross(ab, ac);
 //
 //			std::array<float, 16> data {
@@ -128,6 +132,7 @@ void dropCallback(GLFWwindow* window, int count, const char** paths) {
 
 	removeCurrentModel();
 	loadModel(path);
+	om = new OpenglModel(*m);
 }
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
@@ -172,7 +177,7 @@ void keyCallback(GLFWwindow* win, int key, int scancode, int action, int mods) {
 		renderer->toggleDiffuseLight();
 	} else if (key == GLFW_KEY_T && action == GLFW_PRESS) {
 
-		raytrace(m);
+		raytrace(m, window->width(), window->height());
 	} else if (key == GLFW_KEY_Q && action == GLFW_PRESS) {
 		saveBuffer();
 	}
@@ -224,55 +229,49 @@ class RaytraceStatistics {
 	};
 
 std::atomic<int> pixelCounter(0);
-//int pixelCounter = 0;
 
 std::mutex mut;
 
-void rt(Model* model, KdTree* tree, unsigned char* data, int h, int n, RaytraceStatistics* stats) {
-	const int w = window->width();
-	const int totalPixels = w * window->height();
+void rt(Model* model, KdTree* tree, unsigned char* data, int width, int height, RaytraceStatistics* stats) {
+	const int totalPixels = width * height;
 
 	while (pixelCounter < totalPixels) {
 		int currentPixel = pixelCounter.fetch_add(1);
-		int x = currentPixel % w;
-		int y = currentPixel / w;
+		int x = currentPixel % width;
+		int y = currentPixel / width;
 		Vector3 color { };
-		const int N = 20;
+		const int N = 250;
 		for (int i = 0; i < N; i++) {
-			Ray ray = Ray::createRay(camera, x, y, w, window->height(), window->aspectRatio());
+			Ray ray = Ray::createRay(camera, x, y, width, height, (float) width / height);
 			Vector3 result = shotRay(ray, -1, 1);
-			color += (1.0 / N) * Vector3 { clamp(result.x), clamp(result.y), clamp(result.z) };
+			color += (1.0f / N) * Vector3 { clamp(result.x), clamp(result.y), clamp(result.z) };
 		}
 
-		data[(x + y * w) * 3 + 0] = color.x * 255;
-		data[(x + y * w) * 3 + 1] = color.y * 255;
-		data[(x + y * w) * 3 + 2] = color.z * 255;
+		data[(x + y * width) * 3 + 0] = color.x * 255;
+		data[(x + y * width) * 3 + 1] = color.y * 255;
+		data[(x + y * width) * 3 + 2] = color.z * 255;
 
-		if (((pixelCounter % 100) == 0) && mut.try_lock()) {
-			cout << (double) pixelCounter / (window->height() * w) * 100.0 << "%" << endl;
+		if (((pixelCounter % (totalPixels / 100)) == 0) && mut.try_lock()) {
+			cout << (double) pixelCounter / (height * width) * 100.0 << "%" << endl;
 			mut.unlock();
 		}
 	}
 }
 
-void raytrace(Model* model) {
+void raytrace(Model* model, int width, int height) {
 	pixelCounter = 0;
 	clock_t begin = clock();
 
-	unsigned char data[window->width() * window->height() * 3] = { 0 };
+	unsigned char data[width * height * 3] = { 0 };
 	const int q = max(1, (int) std::thread::hardware_concurrency() - 1);
 	vector<thread> threads;
-	int h = window->height();
 
 	RaytraceStatistics* stats = new RaytraceStatistics();
 	stats->tests = 0;
 	stats->intersections = 0;
 
 	for (int i = 0; i < q; i++) {
-		int from = h / q * i;
-		int to = from + h / q;
-//		cout << from << " " << to << endl;
-		threads.push_back(thread(rt, model, kdTree, &data[0], from, to, stats));
+		threads.push_back(thread(rt, model, kdTree, &data[0], width, height, stats));
 	}
 
 	for (auto& th : threads) {
@@ -289,13 +288,12 @@ void raytrace(Model* model) {
 
 	delete stats;
 
-	unsigned error = lodepng::encode(string(config.output), data, window->width(), window->height(), LCT_RGB);
+	unsigned error = lodepng::encode(string(config.output), data, width, height, LCT_RGB);
 	cout << error << " " << config.output << endl;
 }
 
 void loadModel(string path) {
 	m = new Model(path, true);
-	om = new OpenglModel(*m);
 	modelTriangles = modelToTriangles(m, transformations());
 	kdTree = new KdTree(*modelTriangles, X);
 
@@ -316,11 +314,11 @@ class Line {
 class Light {
 	public:
 		Vector3 position { };
-		Vector3 color { };
+		Vector4 color { };
 };
 
 //Light light1 = { Vector3 { 2.0f, 2.0f, 0.0f }, Vector3 { .4f, .4f, .4f } };
-Light light1 = { Vector3 { 0.0f, 1.90f, 0.0f }, Vector3 { .4f, .4f, .4f } };
+Light light1 = { Vector3 { 0.0f, 1.80f, 0.0f }, Vector4 { 1.0f, .6f, .6f, 1.0f } };
 
 vector<Line> lines;
 set<const KdTree*> trees { };
@@ -338,7 +336,7 @@ Vector3 albedo { .3f, .3f, .3f };
 
 //http://corysimon.github.io/articles/uniformdistn-on-sphere/
 Vector3 randomVectorOnHemisphere(const Vector3& normal) {
-	float theta = 2 * M_PI * distribution(gen);
+	float theta = 2.0f * M_PI * distribution(gen);
 	float phi = acos(1 - 2 * distribution(gen));
 	float x = sin(phi) * cos(theta);
 	float y = sin(phi) * sin(theta);
@@ -352,7 +350,6 @@ Vector3 randomVectorOnHemisphere(const Vector3& normal) {
 
 Vector3 shotRay(const Ray& ray, int origin, int n) {
 	if (n > 11 || (n > 5 && russianRouletteDistribution(genRussianRoulette) > 0.7f)) {
-//		return Vector3 { 0.75f, 0.7f, 0.7f }; //background
 		return Vector3 { };
 	}
 
@@ -365,43 +362,37 @@ Vector3 shotRay(const Ray& ray, int origin, int n) {
 
 	if (!traverseResult->didHit()) {
 		return Vector3 { 0.75f, 0.7f, 0.7f }; //background
-//		return Vector3 {};
 	} else {
 		const Vector3 intersectionPoint = *traverseResult->intersectionPoint;
-		const Vector3 normal = traverseResult->triangle->normal();
+		const Triangle* intersectedTriangle = traverseResult->intersectedTriangle;
+		const Vector3 normal = intersectedTriangle->normal();
 //		const Vector3 normal = traverseResult->triangle->v1.normal;
+//		lines.push_back(Line { ray.getOrigin(), intersectionPoint, Vector4 { 0.0f, 0.0f, 0.0f, 1.0f } });
 
 		{
 			Vector3 lightDir = (light1.position - intersectionPoint).normalize();
 			Ray lightRay { intersectionPoint, lightDir };
-			if (!findAny(kdTree, lightRay, traverseResult->triangle)) {
+			unique_ptr<KdTreeTraversalResult> lightTraverseResult(new KdTreeTraversalResult);
+			if (!findAny(kdTree, lightRay, intersectedTriangle->id, Vector3::distance(light1.position, intersectionPoint), lightTraverseResult.get())) {
 				directLight = max(0.0f, Vector3::cosineAngle(normal, lightDir)) * light1.color;
 //				directLight = Vector3::cosineAngle(normal, lightDir) * light1.color;
+//				lines.push_back(Line { light1.position, intersectionPoint, Vector4 { 1.0f, 1.0f, 0.0f, 1.0f } });
 //				directLight = light1.color;
+//				cout << "light" << endl;
+			} else {
+//				cout << "no light" << endl;
+//				lines.push_back(Line { light1.position, intersectionPoint, Vector4 { 1.0f, 0.0f, 1.0f, 1.0f } });
+//				interTriangles.insert(lightTraverseResult->intersectedTriangle);
 			}
 		}
-
-//		SphericalVector sv { normal };
-//		sv.fi += fiDis(gen);
-//		sv.phi += phiDis(gen);
-//		Vector3 randomHemisphereDir = Vector3 { sv }.normalize();
 		Vector3 randomHemisphereDir = randomVectorOnHemisphere(normal);
 
 		Ray newRay { intersectionPoint, randomHemisphereDir };
-//		Vector3 idealReflectionDir = (ray.getDirection() - (2 * Vector3::dot(ray.getDirection(), normal) * normal)).normalize();
 
 		float pdf = 1.0 / (2.0f * M_PI);
 		float theta = max(0.0f, Vector3::cosineAngle(normal, randomHemisphereDir));
-		indirectLight = theta * shotRay(newRay, traverseResult->triangle->id, n + 1) / pdf;
-		result = (directLight + 2 * indirectLight) / M_PI * albedo;
-//		float pdf = 1.0 / (2.0f * M_PI);
-//		float theta = Vector3::cosineAngle(normal, randomHemisphereDir);
-//		indirectLight = theta * shotRay(newRay, traverseResult->triangle, n + 1) / pdf;
-//		result = (directLight / M_PI + indirectLight) * albedo;
-
-//		indirectLight = albedo * shotRay(newRay, traverseResult->triangle, n + 1);
-//		result = directLight + indirectLight;
-//		shotRay(Ray { intersectionPoint, randomHemisphereDir }, traverseResult->triangle, n + 1)
+		indirectLight = theta * shotRay(newRay, intersectedTriangle->id, n + 1) / pdf;
+		result = (directLight + 2 * indirectLight) / M_PI * intersectedTriangle->material->diffuse;
 	}
 //	if(n == 1) {
 //		cout << "indirect: " << indirectLight << ", direct: " << directLight << ", result: " << result << endl;
@@ -472,18 +463,28 @@ void mouseButtonCallback(GLFWwindow* win, int button, int action, int mods) {
 }
 
 int main(int argc, char** argv) {
-	if (!loadConfig(argv[1], config)) {
-		cout << "unable to load config file\n" << endl;
+	if (argc > 1) {
+		if (!loadConfig(argv[1], config)) {
+			cout << "unable to load config file\n" << endl;
+			return 1;
+		}
+	} else {
+		cout << "pass rtc config file as argument" << endl;
+		return 1;
 	}
-//	if(strcmp(argv[2], "batch") == 0) {
-//		gui = false;
-//	}
-
 	config.print(cout);
 
 	camera.setPosition(config.viewPoint);
 	camera.lookAt(config.lookAt);
 	camera.setUp(config.up);
+
+	loadModel(string(config.input));
+
+	if (argc > 2 && (strcmp(argv[2], "batch") == 0)) {
+		raytrace(m, config.xres, config.yres);
+		return 0;
+	}
+
 
 	window = Window::createWindow(config.xres, config.yres);
 	window->setFramebufferSizeCallback(framebufferSizeCallback);
@@ -496,8 +497,8 @@ int main(int argc, char** argv) {
 
 	renderer = new Renderer(window.get(), "shaders/vertex.glsl", "shaders/fragment.glsl");
 	updateWindowTitle();
+	om = new OpenglModel(*m);
 
-	loadModel(string(config.input));
 
 	float deltaTime = 0.0f;
 	float lastFrame = 0.0f;
@@ -506,7 +507,7 @@ int main(int argc, char** argv) {
 		float currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 
-		if (deltaTime > 1.0f / 60.0f) {
+		if (deltaTime > 1.0f / 30.0f) {
 			lastFrame = currentFrame;
 
 			renderer->clearColor(0.75f, 0.7f, 0.7f);
@@ -530,8 +531,13 @@ int main(int argc, char** argv) {
 				camera.position = camera.position + (1.0f / 20.0f * side);
 			}
 			if (m) {
+//				cout << camera.pitch << ", " << camera.yaw << endl;
+
 				renderer->draw(*om, camera, transformations());
-//				renderer->drawKdTree(kdTree, camera);
+				renderer->setLineWidth(1.0f);
+				renderer->drawKdTree(kdTree, camera);
+				renderer->setLineWidth(3.0f);
+				renderer->drawLine(config.viewPoint, 50 * (config.lookAt - config.viewPoint).normalize(), camera, Vector4 { 0.0f, 0.0f, 1.0f, 1.0f });
 //				renderer->drawLine(Matrix4x4::multiply(transformations(), m->bounding.getMin(), 1.0f), Matrix4x4::multiply(transformations(), m->bounding.getMax(), 1.0f), camera, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
 
 //				glLineWidth(0.5);
@@ -551,16 +557,17 @@ int main(int argc, char** argv) {
 						break;
 					}
 				}
-				renderer->drawPoint(light1.position, camera, Vector4 { 1.0f, 1.0f, 0.0f, 1.0f });
+				renderer->drawPoint(light1.position, camera, light1.color);
 				renderer->drawPoint(Vector3 { }, camera, Vector4 { 0.0f, 0.0f, 0.0f, 1.0f });
 //				for (const KdTree* tree : trees) {
 //					renderer->drawAABB(tree->getAABB(), camera, Vector4(1.0f, 0.0f, 1.0f, 1.0f));
 //					renderer->drawKdTree(tree, camera);
 //				}
-//				for (const Triangle* triangle : interTriangles) {
-//					renderer->drawAABB(tree->aabb, camera, Vector4(1.0f, 0.0f, 1.0f, 1.0f));
-//					renderer->drawTriangle(*triangle, camera, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-//				}
+				renderer->setLineWidth(5.0f);
+				for (const Triangle* triangle : interTriangles) {
+					renderer->drawTriangle(*triangle, camera, Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+				}
+				renderer->setLineWidth(3.0f);
 //				renderer->setLineWidth(4.0f);
 //				if (leaf) {
 //					if (leaf->getAxis() == X) {
