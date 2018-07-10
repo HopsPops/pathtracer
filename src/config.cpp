@@ -1,22 +1,28 @@
 #include <config.hpp>
 
-void Config::print(std::ostream& stream) const {
-	stream << "input: " << input << std::endl;
-	stream << "output: " << output << std::endl;
-	stream << "k: " << k << std::endl;
-	stream << "n: " << n << std::endl;
-	stream << "xres: " << xres << std::endl;
-	stream << "yres: " << xres << std::endl;
-	stream << "VPx: " << viewPoint.x << std::endl;
-	stream << "VPy: " << viewPoint.y << std::endl;
-	stream << "VPz: " << viewPoint.z << std::endl;
-	stream << "LAx: " << lookAt.x << std::endl;
-	stream << "LAy: " << lookAt.y << std::endl;
-	stream << "LAz: " << lookAt.z << std::endl;
-	stream << "UPx: " << up.x << std::endl;
-	stream << "UPy: " << up.y << std::endl;
-	stream << "UPz: " << up.z << std::endl;
-	stream << "yview: " << yview << std::endl;
+using namespace std;
+
+void Config::print(ostream& stream) const {
+	stream << "input: " << input << endl;
+	stream << "output: " << output << endl;
+	stream << "k: " << k << endl;
+	stream << "n: " << n << endl;
+	stream << "xres: " << xres << endl;
+	stream << "yres: " << xres << endl;
+	stream << "viewPoint: " << viewPoint << endl;
+	stream << "lookAt: " << lookAt << endl;
+	stream << "up: " << up << endl;
+
+//	stream << "VPx: " << viewPoint.x << endl;
+//	stream << "VPy: " << viewPoint.y << endl;
+//	stream << "VPz: " << viewPoint.z << endl;
+//	stream << "LAx: " << lookAt.x << endl;
+//	stream << "LAy: " << lookAt.y << endl;
+//	stream << "LAz: " << lookAt.z << endl;
+//	stream << "UPx: " << up.x << endl;
+//	stream << "UPy: " << up.y << endl;
+//	stream << "UPz: " << up.z << endl;
+//	stream << "yview: " << yview << endl;
 }
 
 bool loadConfig(char* file, Config& c) {

@@ -26,7 +26,9 @@ class Vector3 {
 		float x = 0.0f;
 		float y = 0.0f;
 		float z = 0.0f;
+
 		Vector3& normalize(); //return this
+		Vector3 normalize() const;
 		Vector3& negate();
 		Vector3& scale(float);
 		float length() const;

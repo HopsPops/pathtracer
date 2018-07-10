@@ -17,10 +17,8 @@
 
 using namespace std;
 
-
 mt19937 genRussianRoulette(0);
 uniform_real_distribution<float> russianRouletteDistribution(0.0f, 1.0f);
-
 
 Vector3 shotRay(const KdTree* tree, const Triangles& lights, const Ray& ray, long exclude, int n, int k, TraverseDebug* debug) {
 	if (n > k || (n > 10 && russianRouletteDistribution(genRussianRoulette) > 0.7f)) {
@@ -49,7 +47,6 @@ Vector3 shotRay(const KdTree* tree, const Triangles& lights, const Ray& ray, lon
 //		cout << "normal " << normal << endl;
 		const Ray newRay { intersectionPoint, randomDirection };
 
-
 		if (debug) {
 			debug->lines.push_back(Line { ray.getOrigin(), intersectionPoint, Vector4 { 0.0f, 0.0f, 0.0f, 1.0f } });
 		}
@@ -58,25 +55,28 @@ Vector3 shotRay(const KdTree* tree, const Triangles& lights, const Ray& ray, lon
 			return intersectedTriangle->material->emmisive;
 		} else {
 			for (const Triangle* light : lights) {
-				Vector3 position = light->randomPointOnTriangle();
-				Vector3 lightDir = (position - intersectionPoint).normalize();
+				for (int i = 0; i < 5; i++) {
+					Vector3 position = light->randomPointOnTriangle();
+					Vector3 lightDir = (position - intersectionPoint).normalize();
 
-				Ray lightRay { intersectionPoint, lightDir };
+					Ray lightRay { intersectionPoint, lightDir };
 
-				unique_ptr<KdTreeTraversalResult> lightTraverseResult(new KdTreeTraversalResult);
+					unique_ptr<KdTreeTraversalResult> lightTraverseResult(new KdTreeTraversalResult);
 
-				find(tree, lightRay, intersectedTriangle->id, lightTraverseResult.get());
-				if (!lightTraverseResult->didHit()) {
-					continue;
-				}
+					find(tree, lightRay, intersectedTriangle->id, lightTraverseResult.get());
+					if (!lightTraverseResult->didHit()) {
+						continue;
+					}
 
-				if (light->id == lightTraverseResult->intersectedTriangle->id) {
-					directLight += fabs(Vector3::cosineAngle(light->normal(), lightDir)) * light->material->emmisive;
+					if (light->id == lightTraverseResult->intersectedTriangle->id) {
+						directLight += fabs(Vector3::cosineAngle(light->normal(), lightDir)) * light->material->emmisive;
 
-					if (debug) {
-						debug->lines.push_back(Line { position, intersectionPoint, Vector4 { 1.0f, 1.0f, 0.0f, 1.0f } });
+						if (debug) {
+							debug->lines.push_back(Line { position, intersectionPoint, Vector4 { 1.0f, 1.0f, 0.0f, 1.0f } });
+						}
 					}
 				}
+				directLight = directLight / 5.0f;
 			}
 		}
 
@@ -91,6 +91,9 @@ Vector3 shotRay(const KdTree* tree, const Triangles& lights, const Ray& ray, lon
 void pathtraceTask(const KdTree* tree, const Triangles& lights, const Camera& camera, unsigned char* data, atomic<int>* pixelCounter, mutex* mut, const TraceRequest& request) {
 	const int totalPixels = request.width * request.height;
 
+	mt19937 gen(0);
+	uniform_real_distribution<float> dis(0.0f, 1.0f);
+
 	while (*pixelCounter < totalPixels) {
 		int currentPixel = pixelCounter->fetch_add(1);
 		int x = currentPixel % request.width;
@@ -99,7 +102,7 @@ void pathtraceTask(const KdTree* tree, const Triangles& lights, const Camera& ca
 		Vector3 color { };
 
 		for (unsigned int i = 0; i < request.raysPerPixel; i++) {
-			Ray ray = Ray::createRay(camera, x, y, request.width, request.height, (float) request.width / request.height);
+			Ray ray = Ray::createRay(camera, x + dis(gen), y + dis(gen), request.width, request.height, (float) request.width / request.height);
 			Vector3 result = shotRay(tree, lights, ray, -1, 0, request.k);
 			color += (1.0f / request.raysPerPixel) * result.clamp(1.0f);
 		}

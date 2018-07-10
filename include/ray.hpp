@@ -11,7 +11,7 @@ class Ray {
 	public:
 		Ray(Vector3 origin, Vector3 direction);
 
-		static Ray createRay(const Camera&, int, int, int, int, double);
+		static Ray createRay(const Camera&, float, float, int, int, double);
 
 		const Vector3& getOrigin() const;
 

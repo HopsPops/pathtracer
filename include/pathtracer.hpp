@@ -4,6 +4,20 @@
 #include <triangle.hpp>
 #include <camera.hpp>
 
+struct Line {
+		Vector3 v1 { }, v2 { };
+		Vector4 color { 1.0f, 1.0f, 1.0f, 1.0f };
+};
+
+struct Point {
+		Vector3 position { };
+		Vector4 color { };
+};
+
+struct TraverseDebug {
+		std::vector<Line> lines;
+};
+
 class TraceRequest {
 	public:
 		unsigned int width = 400;
@@ -21,6 +35,7 @@ class TraceRequest {
 			this->k = config.k;
 		}
 };
+Vector3 shotRay(const KdTree*, const Triangles&, const Ray&, long, int, int, TraverseDebug* = nullptr);
 
 void pathtrace(const KdTree*, const Triangles&, const Camera&, unsigned char*, const TraceRequest&);
 void pathtrace(const KdTree*, const Triangles&, const Camera&, unsigned char*, const Config&);

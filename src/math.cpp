@@ -470,3 +470,7 @@ Vector3 Vector3::min(const Vector3& v1, const Vector3& v2) {
 Vector3 Vector3::max(const Vector3& v1, const Vector3& v2) {
 	return Vector3 { fmax(v1.x, v2.x), fmax(v1.y, v2.y), fmax(v1.z, v2.z) };
 }
+
+Vector3 Vector3::normalize() const {
+	return Vector3 { x, y, z }.normalize();
+}

@@ -1,6 +1,8 @@
 #include <camera.hpp>
 #include <cmath>
 
+using namespace std;
+
 Camera::Camera() {
 
 }
@@ -10,7 +12,7 @@ Matrix4x4 Camera::perspective(double aspectRatio) const {
 }
 
 Vector3 Camera::getFront() const {
-	Vector3 front = Vector3(0.0f, 0.0f, -1.0f);
+	Vector3 front { 0.0f, 0.0f, -1.0f };
 
 	Matrix4x4 rotation = Matrix4x4::rotationMatrixXYZ(pitch, yaw, 0.0f);
 	front = (Vector3) Matrix4x4::multiply(rotation, front, 1.0f);
@@ -45,15 +47,14 @@ void Camera::setPosition(const Vector3& v) {
 
 void Camera::lookAt(const Vector3& point) {
 	Vector3 dir = (point - position).normalize();
+//	Vector3 dir = (position - point).normalize();
 
-	float yaw = 0.0f;
-	yaw = atan2(dir.x, -dir.y);
+	float yaw = atan2(dir.x, -dir.y);
 	this->yaw = yaw;
 
-	float pitch = 0.0f;
-	pitch = atan2(sqrt(dir.x * dir.x + dir.y * dir.y), dir.z);
+	float pitch = atan2(sqrt(dir.x * dir.x + dir.y * dir.y), dir.z);
 	this->pitch = pitch;
-
+	cout << dir << "yaw " << yaw << " pitch " << pitch << endl;
 }
 
 void Camera::setUp(const Vector3& v) {
