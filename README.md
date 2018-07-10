@@ -50,6 +50,7 @@ pathtracer.exe config.rtc batch
 ```
 
 ##Gui mode
+
 Executing program without 'batch' argument makes it start in interactive mode with interface.
 In this mode you can move camera with WASD buttons and rotate it with mouse while holding SPACE.
 Pressing T starts rendering scene from current camera perspective.
