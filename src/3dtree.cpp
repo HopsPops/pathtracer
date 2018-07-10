@@ -2,12 +2,12 @@
 #include <assert.h>
 #include <intersection.hpp>
 #include <math.hpp>
-#include <ray.hpp>
 #include <vertex.hpp>
 #include <algorithm>
 #include <random>
 
-typedef std::pair<PartitionData, SplitData> PartitionResult;
+using namespace std;
+typedef pair<PartitionData, SplitData> PartitionResult;
 
 SplitData splitHeuristic(const Triangles& triangles, int axis, float splitPoint) {
 	SplitData result { (int) triangles.size(), splitPoint };
@@ -60,8 +60,8 @@ float calculateCost(SplitData split) {
 PartitionResult partitionSAH(const Triangles& triangles, int axis) {
 	SplitData bestSplit = splitHeuristic(triangles, axis, triangles[0]->v1.position[axis]);
 
-	std::mt19937 gen(triangles.size());
-	std::uniform_int_distribution<> distribution(0, triangles.size() - 1);
+	mt19937 gen(triangles.size());
+	uniform_int_distribution<> distribution(0, triangles.size() - 1);
 
 	for (int t = 0; t < fmin(300, (int) triangles.size()); t++) {
 		const Triangle triangle = *triangles[distribution(gen)];
@@ -86,9 +86,9 @@ int chooseAxis(const Triangles& triangles, int previousAxis) {
 //	float lengthY = aabb.getMax().y - aabb.getMin().y;
 //	float lengthZ = aabb.getMax().z - aabb.getMin().z;
 //
-//	std::vector<std::pair<int, float>> lengths { make_pair(0, lengthX), make_pair(1, lengthY), make_pair(2, lengthZ) };
+//	vector<pair<int, float>> lengths { make_pair(0, lengthX), make_pair(1, lengthY), make_pair(2, lengthZ) };
 //
-//	std::sort(lengths.begin(), lengths.end(), [](auto &left, auto &right) {
+//	sort(lengths.begin(), lengths.end(), [](auto &left, auto &right) {
 //		return left.second > right.second;
 //	});
 //
@@ -155,7 +155,7 @@ unsigned int depth(const KdTree* tree, unsigned int level) {
 	if (tree->isLeaf()) {
 		return level + 1;
 	} else {
-		return std::max(depth(tree->getLeft(), level + 1), depth(tree->getRight(), level + 1));
+		return max(depth(tree->getLeft(), level + 1), depth(tree->getRight(), level + 1));
 	}
 }
 
@@ -211,7 +211,7 @@ bool find(const KdTree* tree, const Ray& ray, long exclude, float* d, KdTreeTrav
 				continue;
 			}
 
-			std::unique_ptr<Vector3> intersection = intersectTriangle(ray, *triangle);
+			unique_ptr<Vector3> intersection = intersectTriangle(ray, *triangle);
 			if (!intersection) {
 				continue;
 			}
@@ -223,7 +223,7 @@ bool find(const KdTree* tree, const Ray& ray, long exclude, float* d, KdTreeTrav
 			float dist = Vector3::distance(ray.getOrigin(), *intersection);
 
 			if (dist < *d) {
-				result->intersectionPoint = std::unique_ptr<Vector3>(intersection.release());
+				result->intersectionPoint = unique_ptr<Vector3>(intersection.release());
 				result->intersectedTriangle = triangle;
 				*d = dist;
 				found = true;
@@ -238,7 +238,7 @@ bool find(const KdTree* tree, const Ray& ray, long exclude, float* d, KdTreeTrav
 		const KdTree* n = tree->getLeft();
 		const KdTree* f = tree->getRight();
 		if (ray.getOrigin()[tree->getAxis()] > tree->splitPoint) {
-			std::swap(n, f);
+			swap(n, f);
 		}
 
 		float tsplit = (tree->splitPoint - ray.getOrigin()[tree->getAxis()]) / ray.getDirection()[tree->getAxis()];
@@ -257,6 +257,6 @@ bool find(const KdTree* tree, const Ray& ray, long exclude, float* d, KdTreeTrav
 }
 
 bool find(const KdTree* tree, const Ray& ray, long exclude, KdTreeTraversalResult* result, KdTreeDebugData* debug) {
-	float d = INFINITY;
+	float d = numeric_limits<float>::infinity();
 	return find(tree, ray, exclude, &d, result, debug);
 }

@@ -1,6 +1,8 @@
 #include <triangle.hpp>
-#include <algorithm>
+#include <cmath>
 #include <random>
+
+using namespace std;
 
 Vector3 Triangle::middle() const {
 	float x = (v1.position.x + v2.position.x + v3.position.x) / 3.0;
@@ -69,8 +71,8 @@ Vector3 Triangle::normal() const {
 }
 
 Vector3 Triangle::randomPointOnTriangle() const {
-	static std::mt19937 triangleGen(0);
-	static std::uniform_real_distribution<float> triangleDistr(0.0f, 1.0f);
+	static mt19937 triangleGen(0);
+	static uniform_real_distribution<float> triangleDistr(0.0f, 1.0f);
 
 	float l1 = triangleDistr(triangleGen);
 	float l2 = triangleDistr(triangleGen);
@@ -89,11 +91,11 @@ bool Triangle::isLight() const {
 }
 
 float Triangle::minAxis(int axis) const {
-	return std::min(v1.position[axis], std::min(v2.position[axis], v3.position[axis]));
+	return fmin(v1.position[axis], fmin(v2.position[axis], v3.position[axis]));
 }
 
 float Triangle::maxAxis(int axis) const {
-	return std::max(v1.position[axis], std::max(v2.position[axis], v3.position[axis]));
+	return fmax(v1.position[axis], fmax(v2.position[axis], v3.position[axis]));
 }
 
 Triangles findLights(const Triangles& triangles) {

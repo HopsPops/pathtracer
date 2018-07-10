@@ -2,8 +2,6 @@
 #include <cmath>
 #include <iostream>
 
-//#include "glad.c"
-
 using namespace std;
 
 unique_ptr<Window> Window::createWindow(int width, int height) {
@@ -16,7 +14,7 @@ unique_ptr<Window> Window::createWindow(int width, int height) {
 	Window* w = new Window();
 	w->handle = glfwCreateWindow(width, height, "", NULL, NULL);
 	if (w->handle == NULL) {
-		std::cout << "Failed to create GLFW window" << std::endl;
+		cout << "Failed to create GLFW window" << endl;
 		glfwTerminate();
 		return unique_ptr<Window>(nullptr);
 	}
@@ -24,7 +22,7 @@ unique_ptr<Window> Window::createWindow(int width, int height) {
 	glfwMakeContextCurrent(w->handle);
 
 	if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
-		std::cout << "Failed to initialize GLAD" << std::endl;
+		cout << "Failed to initialize GLAD" << endl;
 		return unique_ptr<Window>(nullptr);
 	}
 //	glfwDefaultWindowHints();

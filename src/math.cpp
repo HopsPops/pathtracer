@@ -4,6 +4,8 @@
 #include <random>
 #include <stdexcept>
 
+using namespace std;
+
 float toRadians(float degrees) {
 	return degrees * M_PI / 180.0f;
 }
@@ -175,7 +177,7 @@ Matrix4x4 Matrix4x4::projection(float fovy, float aspectRatio, float near, float
 	return projection(-width, width, -height, height, near, far);
 }
 
-std::array<float, 16> Matrix4x4::getData() {
+array<float, 16> Matrix4x4::getData() {
 	return data;
 }
 
@@ -244,7 +246,7 @@ Vector3 Vector3::operator +(const Vector3& v) const {
 	return Vector3(x + v.x, y + v.y, z + v.z);
 }
 
-const std::array<float, 16> Matrix4x4::getData() const {
+const array<float, 16> Matrix4x4::getData() const {
 	return data;
 }
 
@@ -269,7 +271,7 @@ Matrix4x4 Matrix4x4::transpose() {
 	return result;
 }
 
-Matrix4x4::Matrix4x4(std::array<float, 16> data) {
+Matrix4x4::Matrix4x4(array<float, 16> data) {
 	this->data = data;
 }
 
@@ -344,7 +346,7 @@ float* Vector3::operator [](int i) {
 	} else if (i == 2) {
 		return &z;
 	} else {
-		throw std::invalid_argument("i > 2");
+		throw invalid_argument("i > 2");
 	}
 }
 
@@ -381,7 +383,7 @@ const Vector3& Vector3::operator -=(const Vector3& v) {
 	return *this;
 }
 
-std::ostream& operator<<(std::ostream &stream, const Vector3& vec) {
+ostream& operator<<(ostream &stream, const Vector3& vec) {
 	stream << "{ " << vec.x << ", " << vec.y << ", " << vec.z << " }";
 	return stream;
 }
@@ -426,12 +428,12 @@ Vector3 operator *(const Vector3& v1, const Vector3& v2) {
 	return Vector3 { v1.x * v2.x, v1.y * v2.y, v1.z * v2.z };
 }
 
-//std::random_device rd;
+//random_device rd;
 
 //http://corysimon.github.io/articles/uniformdistn-on-sphere/
 Vector3 randomVectorOnSphere() {
-	static std::mt19937 gen(0);
-	static std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
+	static mt19937 gen(0);
+	static uniform_real_distribution<float> distribution(0.0f, 1.0f);
 
 	float theta = 2.0f * M_PI * distribution(gen);
 	float phi = acos(1 - 2 * distribution(gen));

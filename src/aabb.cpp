@@ -3,6 +3,8 @@
 #include <cmath>
 #include <limits>
 
+using namespace std;
+
 AABB::AABB() {
 	this->minimum = Vector3(0.0f, 0.0f, 0.0f);
 	this->maximum = Vector3(0.0f, 0.0f, 0.0f);
@@ -22,8 +24,8 @@ const Vector3& AABB::getMax() const {
 }
 
 AABB::AABB(const Triangles& triangles) {
-	Vector3 minimum(std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity());
-	Vector3 maximum(-std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity());
+	Vector3 minimum(numeric_limits<float>::infinity(), numeric_limits<float>::infinity(), numeric_limits<float>::infinity());
+	Vector3 maximum(-numeric_limits<float>::infinity(), -numeric_limits<float>::infinity(), -numeric_limits<float>::infinity());
 
 	for (const Triangle* triangle : triangles) {
 		for (int v = 0; v < 3; v++) {
@@ -40,9 +42,9 @@ AABB::AABB(const Triangles& triangles) {
 	this->maximum = maximum;
 }
 
-AABB::AABB(const std::vector<Vector3>& list) {
-	Vector3 minimum(std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity());
-	Vector3 maximum(-std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity());
+AABB::AABB(const vector<Vector3>& list) {
+	Vector3 minimum(numeric_limits<float>::infinity(), numeric_limits<float>::infinity(), numeric_limits<float>::infinity());
+	Vector3 maximum(-numeric_limits<float>::infinity(), -numeric_limits<float>::infinity(), -numeric_limits<float>::infinity());
 
 	for (const Vector3& v : list) {
 		minimum.x = fmin(minimum.x, v.x);

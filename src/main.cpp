@@ -66,9 +66,6 @@ void dropCallback(GLFWwindow* window, int count, const char** paths) {
 	om = new OpenglModel(*m);
 }
 
-atomic<int> pixelCounter(0);
-mutex mut;
-
 void loadModel(string path) {
 	m = new Model(path);
 	modelTriangles = modelToTriangles(m, lights);
@@ -92,7 +89,7 @@ void savePNG(unsigned char* data, int width, int height) {
 	cout << error << " " << config.output << endl;
 }
 
-void f(const KdTree* tree, const Triangles& triangles, const Camera& camera, const TraceRequest& request) {
+void render(const KdTree* tree, const Triangles& triangles, const Camera& camera, const TraceRequest& request) {
 	unsigned char data[request.width * request.height * 3] = { 0 };
 	pathtrace(kdTree, triangles, camera, data, request);
 	savePNG(data, request.width, request.height);
@@ -117,7 +114,7 @@ int main(int argc, char** argv) {
 	loadModel(string(config.input));
 
 	if (argc > 2 && (strcmp(argv[2], "batch") == 0)) {
-		f(kdTree, *modelTriangles, camera, TraceRequest(config));
+		render(kdTree, *modelTriangles, camera, TraceRequest(config));
 		return 0;
 	}
 
@@ -138,7 +135,7 @@ int main(int argc, char** argv) {
 		} else if (key == GLFW_KEY_3 && action == GLFW_PRESS) {
 			renderer->toggleDiffuseLight();
 		} else if (key == GLFW_KEY_T && action == GLFW_PRESS) {
-			f(kdTree, *modelTriangles, camera, TraceRequest(config));
+			render(kdTree, *modelTriangles, camera, TraceRequest(config));
 		}
 	});
 
@@ -209,10 +206,10 @@ int main(int argc, char** argv) {
 
 				renderer->drawAABB(kdTree->getAABB(), camera, Vector4 { 1.0f, 0.7f, 0.6f, 1.0f }, 2.0f); //draw root of kdtree
 
-				for (const Triangle* triangle : *modelTriangles) { //draw normals
-					Vector3 middle = triangle->middle();
-					renderer->drawLine(middle, middle + 0.1 * triangle->normal(), camera, Vector4 { 0.0f, 0.0f, 0.7f, 1.0f });
-				}
+//				for (const Triangle* triangle : *modelTriangles) { //draw normals
+//					Vector3 middle = triangle->middle();
+//					renderer->drawLine(middle, middle + 0.1 * triangle->normal(), camera, Vector4 { 0.0f, 0.0f, 0.7f, 1.0f });
+//				}
 
 				for (Point& point : points) {
 					renderer->drawPoint(point.position, camera, point.color);
