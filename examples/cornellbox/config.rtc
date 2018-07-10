@@ -1,0 +1,23 @@
+input CornellBox-Original.obj
+output framebruffer.png 
+
+k 5
+n 250
+
+xres 400
+yres 300
+
+VPx 0.0
+VPy 1.0
+VPz 3.0
+
+LAx 0.0
+LAy 1.0
+LAz 0.0
+
+UPx 0.0
+UPy 1.0
+UPz 0.0
+
+yview 0.5
+
