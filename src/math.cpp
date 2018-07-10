@@ -1,4 +1,8 @@
-#include "math.hpp"
+#include <math.h>
+#include <math.hpp>
+#include <cmath>
+#include <random>
+#include <stdexcept>
 
 float toRadians(float degrees) {
 	return degrees * M_PI / 180.0f;
@@ -166,7 +170,6 @@ Matrix4x4 Matrix4x4::projection(float left, float right, float bottom, float top
 }
 
 Matrix4x4 Matrix4x4::projection(float fovy, float aspectRatio, float near, float far) {
-//	float tan = ;
 	float height = near * tan(fovy / 2.0f);
 	float width = height * aspectRatio;
 	return projection(-width, width, -height, height, near, far);
@@ -225,24 +228,12 @@ float Vector3::length() const {
 	return sqrt(x * x + y * y + z * z);
 }
 
-//#include <smmintrin.h>
 float Vector3::dot(const Vector3& v1, const Vector3& v2) {
 	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
-//	__m128 a = _mm_setr_ps(v1.x, v1.y, v1.z, 0.0f);
-//	__m128 b = _mm_setr_ps(v2.x, v2.y, v2.z, 0.0f);
-//	__m128 res = _mm_dp_ps(a, b, 119);
-//	float result = res[0];
-//	return result;
 }
 
 Vector3 Vector3::cross(const Vector3& v1, const Vector3& v2) {
 	return Vector3(v1.y * v2.z - v1.z * v2.y, v1.z * v2.x - v1.x * v2.z, v1.x * v2.y - v1.y * v2.x);
-//	__m128 a = _mm_setr_ps(v1.x, v1.y, v1.z, 0.0f);
-//	__m128 b = _mm_setr_ps(v2.x, v2.y, v2.z, 0.0f);
-//	__m128 result = _mm_sub_ps(
-//			_mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 0, 2, 1)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 1, 0, 2))),
-//			_mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 1, 0, 2)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 0, 2, 1))));
-//	return Vector3 { result[0], result[1], result[2] };
 }
 
 Vector3 Vector3::operator -(const Vector3& v) const {
@@ -280,6 +271,10 @@ Matrix4x4 Matrix4x4::transpose() {
 
 Matrix4x4::Matrix4x4(std::array<float, 16> data) {
 	this->data = data;
+}
+
+Matrix4x4::Matrix4x4() {
+	this->data = {0.0f};
 }
 
 Vector4 Matrix4x4::operator *(const Vector4& v) {
@@ -372,6 +367,20 @@ Vector3 Vector3::reflection(const Vector3& dir, const Vector3& normal) {
 	return (dir - (2 * Vector3::dot(dir, normal) * normal)).normalize();
 }
 
+Vector3& Vector3::clamp(float ceiling) {
+	this->x = x > ceiling ? ceiling : x;
+	this->y = y > ceiling ? ceiling : y;
+	this->z = z > ceiling ? ceiling : z;
+	return *this;
+}
+
+const Vector3& Vector3::operator -=(const Vector3& v) {
+	this->x -= v.x;
+	this->y -= v.y;
+	this->z -= v.z;
+	return *this;
+}
+
 std::ostream& operator<<(std::ostream &stream, const Vector3& vec) {
 	stream << "{ " << vec.x << ", " << vec.y << ", " << vec.z << " }";
 	return stream;
@@ -388,26 +397,10 @@ Vector3& Vector3::scale(float factor) {
 	return *this;
 }
 
-//Vector3::Vector3() {
-//
-//}
-
 Vector3::Vector3(float x, float y, float z) {
 	this->x = x;
 	this->y = y;
 	this->z = z;
-}
-
-Vector3::Vector3(const SphericalVector& vec) {
-	this->x = vec.r * sin(vec.phi) * cos(vec.fi);
-	this->y = vec.r * sin(vec.phi) * sin(vec.fi);
-	this->z = vec.r * cos(vec.phi);
-}
-
-SphericalVector::SphericalVector(const Vector3& vec) {
-	this->r = vec.length();
-	this->phi = acos(vec.z / r);
-	this->fi = atan2(vec.x, vec.y);
 }
 
 Vector4::Vector4() {
@@ -422,16 +415,56 @@ Vector4::Vector4(Vector3 v, float w) :
 		x(v.x), y(v.y), z(v.z), w(w) {
 }
 
-std::ostream& operator<<(std::ostream &stream, const SphericalVector& vec) {
-	stream << "{ " << vec.r << ", " << vec.phi << ", " << vec.fi << " }";
-	return stream;
+float clamp(float value, float ceiling) {
+	if (value > ceiling) {
+		return ceiling;
+	}
+	return value;
 }
 
 Vector3 operator *(const Vector3& v1, const Vector3& v2) {
 	return Vector3 { v1.x * v2.x, v1.y * v2.y, v1.z * v2.z };
 }
 
-//
-//Vector3 operator -(Vector3 v1, Vector3 v2) {
-//	return Vector(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z);
-//}
+//std::random_device rd;
+
+//http://corysimon.github.io/articles/uniformdistn-on-sphere/
+Vector3 randomVectorOnSphere() {
+	static std::mt19937 gen(0);
+	static std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
+
+	float theta = 2.0f * M_PI * distribution(gen);
+	float phi = acos(1 - 2 * distribution(gen));
+	float x = sin(phi) * cos(theta);
+	float y = sin(phi) * sin(theta);
+	float z = cos(phi);
+
+	Vector3 dir { x, y, z };
+	return dir.normalize();
+}
+
+Vector3 randomVectorOnHemisphere(const Vector3& normal) {
+	Vector3 dir = randomVectorOnSphere();
+	if (Vector3::dot(normal, dir) < 0.0f) {
+		dir.negate();
+	}
+	return dir.normalize();
+}
+
+Vector2::Vector2() {
+	this->x = 0.0f;
+	this->y = 0.0f;
+}
+
+Vector2::Vector2(float x, float y) {
+	this->x = x;
+	this->y = y;
+}
+
+Vector3 Vector3::min(const Vector3& v1, const Vector3& v2) {
+	return Vector3 { fmin(v1.x, v2.x), fmin(v1.y, v2.y), fmin(v1.z, v2.z) };
+}
+
+Vector3 Vector3::max(const Vector3& v1, const Vector3& v2) {
+	return Vector3 { fmax(v1.x, v2.x), fmax(v1.y, v2.y), fmax(v1.z, v2.z) };
+}

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "glad.h"
+#include <glad.h>
 #include <GLFW/glfw3.h>
 #include <memory>
 
@@ -25,7 +25,7 @@ class Window {
 
 		double cursorX();
 		double cursorY();
-		void setCursorPosition(double x, double y);
+		void setCursorPosition(double, double);
 
 		void setFramebufferSizeCallback(GLFWframebuffersizefun);
 		void setScrollCallback(GLFWscrollfun);

@@ -1,7 +1,7 @@
-#include <iostream>
-#include <math.h>
 #include <window.hpp>
-#include <functional>
+#include <cmath>
+#include <iostream>
+
 //#include "glad.c"
 
 using namespace std;

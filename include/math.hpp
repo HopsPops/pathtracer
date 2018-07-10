@@ -1,25 +1,24 @@
 #pragma once
+
 #include <array>
-#include <cmath>
 #include <iostream>
 
-#define M_PI 3.14159265358979323846
+const double M_PI = 3.14159265358979323846;
 
 float toRadians(float degrees);
 
-class SphericalVector;
+float clamp(float, float = 1.0f);
+class Vector3;
+
+Vector3 randomVectorOnSphere();
+Vector3 randomVectorOnHemisphere(const Vector3&);
 
 class Vector2 {
 	public:
 		float x = 0.0f;
 		float y = 0.0f;
-		Vector2() {
-		}
-		;
-		Vector2(float x, float y) :
-				x(x), y(y) {
-		}
-		;
+		Vector2();
+		Vector2(float, float);
 };
 
 class Vector3 {
@@ -35,23 +34,26 @@ class Vector3 {
 
 		Vector3() = default;
 		Vector3(float x, float y, float z);
-		Vector3(const SphericalVector&);
 
 		static float cosineAngle(const Vector3&, const Vector3&);
 
 		static float dot(const Vector3&, const Vector3&);
 		static Vector3 cross(const Vector3&, const Vector3&);
 		static float distance(const Vector3&, const Vector3&);
+		static Vector3 min(const Vector3&, const Vector3&);
+		static Vector3 max(const Vector3&, const Vector3&);
 		Vector3 operator-(const Vector3&) const;
 		Vector3 operator/(float) const;
 		Vector3 operator+(const Vector3&) const;
 		float operator [](int i) const;
 		float* operator [](int i);
 		Vector3 copy() const;
+		Vector3& clamp(float); //return this
 		Vector3 reflection(const Vector3& dir, const Vector3& normal);
 
 //		const Vector3& operator=(const Vector3&) = default;
 		const Vector3& operator+=(const Vector3&);
+		const Vector3& operator-=(const Vector3&);
 		bool isZero() const;
 		friend std::ostream& operator<<(std::ostream&, const Vector3&);
 };
@@ -62,20 +64,9 @@ struct Material {
 };
 
 
-class SphericalVector {
-	public:
-		float r = 0.0f;
-		float phi = 0.0f;
-		float fi = 0.0f;
-
-		SphericalVector(const Vector3&);
-		friend std::ostream& operator<<(std::ostream&, const SphericalVector&);
-};
-
 Vector3 operator*(float, const Vector3&);
 Vector3 operator*(const Vector3&, float);
 Vector3 operator*(const Vector3&, const Vector3&);
-//Vector3 operator-(Vector3, Vector3);
 
 class Vector4 {
 	public:
@@ -96,10 +87,8 @@ class Vector4 {
 
 class Matrix4x4 {
 	private:
-		std::array<float, 16> data { };
-		Matrix4x4() {
-		}
-		;
+		std::array<float, 16> data { 0.0f };
+		Matrix4x4();
 
 	public:
 		Matrix4x4(std::array<float, 16> data);

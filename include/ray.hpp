@@ -1,8 +1,8 @@
 #pragma once
 
-#include "math.hpp"
-#include <camera.hpp>
+#include <math.hpp>
 #include <iostream>
+#include <camera.hpp>
 
 class Ray {
 	private:
