@@ -22,14 +22,16 @@ mt19937 genRussianRoulette(0);
 uniform_real_distribution<float> russianRouletteDistribution(0.0f, 1.0f);
 
 
-Vector3 shotRay(const KdTree* tree, const Triangles& lights, const Ray& ray, long exclude, int n, int k, bool debug = false) {
+Vector3 shotRay(const KdTree* tree, const Triangles& lights, const Ray& ray, long exclude, int n, int k, TraverseDebug* debug) {
 	if (n > k || (n > 10 && russianRouletteDistribution(genRussianRoulette) > 0.7f)) {
+//		cout << "end " << n << " " << k << endl;
 		return Vector3 { };
 	}
 
 	unique_ptr<KdTreeTraversalResult> traverseResult(new KdTreeTraversalResult);
 
 	find(tree, ray, exclude, traverseResult.get());
+	Vector3 result { };
 	Vector3 directLight { };
 	Vector3 indirectLight { };
 
@@ -41,15 +43,16 @@ Vector3 shotRay(const KdTree* tree, const Triangles& lights, const Ray& ray, lon
 		Vector3 normal = intersectedTriangle->normal();
 
 		Vector3 randomDirection = randomVectorOnHemisphere(normal);
-		if(Vector3::dot(normal, ray.getDirection()) > 0.0f) {
-			randomDirection.negate();
-		}
+//		if(Vector3::dot(normal, ray.getDirection()) > 0.0f) {
+//			randomDirection.negate();
+//		}
+//		cout << "normal " << normal << endl;
 		const Ray newRay { intersectionPoint, randomDirection };
 
 
-//		if (debug) {
-//			lines.push_back(Line { ray.getOrigin(), intersectionPoint, Vector4 { 0.0f, 0.0f, 0.0f, 1.0f } });
-//		}
+		if (debug) {
+			debug->lines.push_back(Line { ray.getOrigin(), intersectionPoint, Vector4 { 0.0f, 0.0f, 0.0f, 1.0f } });
+		}
 
 		if (intersectedTriangle->isLight()) {
 			return intersectedTriangle->material->emmisive;
@@ -70,9 +73,9 @@ Vector3 shotRay(const KdTree* tree, const Triangles& lights, const Ray& ray, lon
 				if (light->id == lightTraverseResult->intersectedTriangle->id) {
 					directLight += fabs(Vector3::cosineAngle(light->normal(), lightDir)) * light->material->emmisive;
 
-//					if (debug) {
-//						lines.push_back(Line { position, intersectionPoint, Vector4 { 1.0f, 1.0f, 0.0f, 1.0f } });
-//					}
+					if (debug) {
+						debug->lines.push_back(Line { position, intersectionPoint, Vector4 { 1.0f, 1.0f, 0.0f, 1.0f } });
+					}
 				}
 			}
 		}
@@ -80,8 +83,9 @@ Vector3 shotRay(const KdTree* tree, const Triangles& lights, const Ray& ray, lon
 		const float PDF = 1.0f / (2.0f * M_PI);
 		const float THETA = fabs(Vector3::cosineAngle(normal, randomDirection));
 		indirectLight = THETA / PDF * shotRay(tree, lights, newRay, intersectedTriangle->id, n + 1, k, debug);
-		return (directLight + 2.0f * indirectLight) / M_PI * intersectedTriangle->material->diffuse;
+		result = (directLight + 2.0f * indirectLight) / M_PI * intersectedTriangle->material->diffuse;
 	}
+	return result;
 }
 
 void pathtraceTask(const KdTree* tree, const Triangles& lights, const Camera& camera, unsigned char* data, atomic<int>* pixelCounter, mutex* mut, const TraceRequest& request) {

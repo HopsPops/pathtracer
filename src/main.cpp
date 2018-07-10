@@ -81,17 +81,6 @@ void loadModel(string path) {
 	printf("average %lf\n", averageTrianglesPerLeaf(kdTree));
 }
 
-class Line {
-	public:
-		Vector3 v1 { }, v2 { };
-		Vector4 color { 1.0f, 1.0f, 1.0f, 1.0f };
-};
-
-struct Point {
-		Vector3 position { };
-		Vector4 color { };
-};
-
 vector<Line> lines;
 vector<Point> points;
 vector<const KdTree*> trees { };
@@ -156,14 +145,16 @@ int main(int argc, char** argv) {
 	//shooting ray from click location
 	window->setMouseButtonCallback([](GLFWwindow* win, int button, int action, int mods) {
 		if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-//			Ray ray = Ray::createRay(camera, window->cursorX(), window->cursorY(), window->width(), window->height(), window->aspectRatio());
+			Ray ray = Ray::createRay(camera, window->cursorX(), window->cursorY(), window->width(), window->height(), window->aspectRatio());
 //
-//			lines.clear();
+			lines.clear();
 //			trees.clear();
 //			points.clear();
 //			interTriangles.clear();
 //			leaf = nullptr;
-//			cout << shotRay(ray, -1, 0, config.k, true) << endl;
+			unique_ptr<TraverseDebug> debug(new TraverseDebug);
+			cout << shotRay(kdTree, findLights(*modelTriangles), ray, -1, 0, 0, debug.get()) << endl;
+			lines.insert(lines.end(), debug->lines.begin(), debug->lines.end());
 		}
 	});
 
