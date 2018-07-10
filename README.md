@@ -1,6 +1,6 @@
 # Pathtracer
 
-Simple pathtracer implementation
+Pathtracer implementation
 
 ## Config file
 
@@ -49,7 +49,7 @@ Executing program in batch mode consist of adding 'batch' as last argument ie.
 pathtracer.exe config.rtc batch
 ```
 
-#Gui mode
+##Gui mode
 Executing program without 'batch' argument makes it start in interactive mode with interface.
 In this mode you can move camera with WASD buttons and rotate it with mouse while holding SPACE.
 Pressing T starts rendering scene from current camera perspective.
