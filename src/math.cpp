@@ -226,8 +226,12 @@ Vector3& Vector3::normalize() {
 	return *this;
 }
 
+float Vector3::length2() const {
+	return dot(*this, *this);
+}
+
 float Vector3::length() const {
-	return sqrt(x * x + y * y + z * z);
+	return sqrt(length2());
 }
 
 float Vector3::dot(const Vector3& v1, const Vector3& v2) {
@@ -302,9 +306,13 @@ Vector4::operator Vector3() const {
 	return Vector3(x, y, z);
 }
 
-float Vector3::distance(const Vector3& v1, const Vector3& v2) {
+float Vector3::distance2(const Vector3& v1, const Vector3& v2) {
 	Vector3 sub = v2 - v1;
-	return sub.length();
+	return sub.length2();
+}
+
+float Vector3::distance(const Vector3& v1, const Vector3& v2) {
+	return sqrt(distance2(v1, v2));
 }
 
 Vector3& Vector3::negate() {
@@ -474,3 +482,4 @@ Vector3 Vector3::max(const Vector3& v1, const Vector3& v2) {
 Vector3 Vector3::normalize() const {
 	return Vector3 { x, y, z }.normalize();
 }
+

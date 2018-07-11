@@ -21,7 +21,7 @@ mt19937 genRussianRoulette(0);
 uniform_real_distribution<float> russianRouletteDistribution(0.0f, 1.0f);
 
 Vector3 shotRay(const KdTree* tree, const Triangles& lights, const Ray& ray, long exclude, int n, int k, TraverseDebug* debug) {
-	if (n > k || (n > 10 && russianRouletteDistribution(genRussianRoulette) > 0.7f)) {
+	if (n > k && russianRouletteDistribution(genRussianRoulette) > 0.7f) {
 //		cout << "end " << n << " " << k << endl;
 		return Vector3 { };
 	}
@@ -69,6 +69,8 @@ Vector3 shotRay(const KdTree* tree, const Triangles& lights, const Ray& ray, lon
 					}
 
 					if (light->id == lightTraverseResult->intersectedTriangle->id) {
+//						float dist2 = Vector3::distance2(intersectionPoint, *lightTraverseResult->intersectionPoint);
+//						directLight += (1.0f / dist2) * fabs(Vector3::cosineAngle(light->normal(), lightDir)) * light->material->emmisive;
 						directLight += fabs(Vector3::cosineAngle(light->normal(), lightDir)) * light->material->emmisive;
 
 						if (debug) {

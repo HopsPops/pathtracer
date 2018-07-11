@@ -46,21 +46,19 @@ void Camera::setPosition(const Vector3& v) {
 }
 
 void Camera::lookAt(const Vector3& point) {
-	Vector3 dir = (point - position).normalize();
-//	Vector3 dir = (position - point).normalize();
-
-	float yaw = atan2(dir.x, -dir.y);
-	this->yaw = yaw;
-
-	float pitch = atan2(sqrt(dir.x * dir.x + dir.y * dir.y), dir.z);
-	this->pitch = pitch;
-	cout << dir << "yaw " << yaw << " pitch " << pitch << endl;
+//	Vector3 dir = (point - position).normalize();
+//
+//	float yaw = atan2(dir.x, -dir.y);
+//	this->yaw = yaw;
+//
+//	float pitch = atan2(sqrt(dir.x * dir.x + dir.y * dir.y), dir.z);
+//	this->pitch = pitch;
 }
 
 void Camera::setUp(const Vector3& v) {
 	up = v;
 }
-
+//yaw -0.519963 pitch 0.0387001
 Matrix4x4 Camera::view() const {
 	return Matrix4x4::lookAt(position, position + getFront(), up);
 }
