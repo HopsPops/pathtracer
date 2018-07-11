@@ -207,11 +207,13 @@ int main(int argc, char** argv) {
 //				}
 				renderer->drawPoint(config.viewPoint, camera, Vector4 { 1.0f, 0.0f, 0.0f, 1.0f });
 				renderer->drawPoint(config.lookAt, camera, Vector4 { 0.0f, 1.0f, 0.0f, 1.0f });
-				renderer->drawLine(config.viewPoint, config.viewPoint + (config.lookAt - config.viewPoint).normalize(), camera, Vector4 { 0.0f, 0.0f, 1.0f, 1.0f });
+//				renderer->drawLine(config.viewPoint, config.viewPoint + (config.lookAt - config.viewPoint).normalize(), camera, Vector4 { 0.0f, 0.0f, 1.0f, 1.0f });
 
 				renderer->drawLine(Vector3 { }, Vector3 { 1.0f, 0.0f, 0.0f }, camera, Vector4 { 1.0f, 0.0f, 0.0f, 1.0f });
 				renderer->drawLine(Vector3 { }, Vector3 { 0.0f, 1.0f, 0.0f }, camera, Vector4 { 0.0f, 1.0f, 0.0f, 1.0f });
 				renderer->drawLine(Vector3 { }, Vector3 { 0.0f, 0.0f, 1.0f }, camera, Vector4 { 0.0f, 0.0f, 1.0f, 1.0f });
+
+				renderer->drawKdTreeLeafs(kdTree, camera, 1.5f);
 
 				for (Point& point : points) {
 					renderer->drawPoint(point.position, camera, point.color);

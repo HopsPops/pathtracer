@@ -94,6 +94,14 @@ Renderer::Renderer(Window* window, const char* vertexPath, const char* fragmentP
 }
 ;
 
+void Renderer::clearColor(const Vector3& color) {
+	glClearColor(color.x, color.y, color.z, 1.0f);
+}
+
+void Renderer::clearColor(int x, int y, int z) {
+	glClearColor(x / 255.0f, y / 255.0f, z / 255.0f, 1.0f);
+}
+
 void Renderer::clearColor(float x, float y, float z) {
 	glClearColor(x, y, z, 1.0f);
 }

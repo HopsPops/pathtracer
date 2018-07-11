@@ -56,7 +56,9 @@ class Renderer {
 	public:
 		Renderer(Window* window, const char* vertexPath, const char* fragmentPath);
 
-		void clearColor(float x, float y, float z);
+		void clearColor(int, int, int);
+		void clearColor(float, float, float);
+		void clearColor(const Vector3&);
 
 		void setViewport(int width, int height);
 
