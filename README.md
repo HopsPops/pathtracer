@@ -2,6 +2,8 @@
 
 Pathtracer implementation
 
+![Image](cornellbox.png)
+![Image](suzanne.png)
 ## Config file
 
 Path to input file:
