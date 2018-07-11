@@ -45,6 +45,7 @@ void Camera::setPosition(const Vector3& v) {
 	position = v;
 }
 
+//TODO: fix lookAt
 void Camera::lookAt(const Vector3& point) {
 //	Vector3 dir = (point - position).normalize();
 //

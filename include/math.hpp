@@ -31,6 +31,7 @@ class Vector3 {
 		Vector3 normalize() const;
 		Vector3& negate();
 		Vector3& scale(float);
+		float length2() const;
 		float length() const;
 
 
@@ -42,6 +43,7 @@ class Vector3 {
 		static float dot(const Vector3&, const Vector3&);
 		static Vector3 cross(const Vector3&, const Vector3&);
 		static float distance(const Vector3&, const Vector3&);
+		static float distance2(const Vector3&, const Vector3&);
 		static Vector3 min(const Vector3&, const Vector3&);
 		static Vector3 max(const Vector3&, const Vector3&);
 		Vector3 operator-(const Vector3&) const;

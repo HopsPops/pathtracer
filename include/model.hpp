@@ -32,4 +32,4 @@ class Model {
 
 };
 
-Triangles* modelToTriangles(Model* model, Triangles& lights, Matrix4x4 transformation = Matrix4x4::identityMatrix());
+Triangles* modelToTriangles(Model* model, Matrix4x4 transformation = Matrix4x4::identityMatrix());

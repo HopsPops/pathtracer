@@ -22,7 +22,6 @@ uniform_real_distribution<float> russianRouletteDistribution(0.0f, 1.0f);
 
 Vector3 shotRay(const KdTree* tree, const Triangles& lights, const Ray& ray, long exclude, int n, int k, TraverseDebug* debug) {
 	if (n > k && russianRouletteDistribution(genRussianRoulette) > 0.7f) {
-//		cout << "end " << n << " " << k << endl;
 		return Vector3 { };
 	}
 
@@ -41,10 +40,6 @@ Vector3 shotRay(const KdTree* tree, const Triangles& lights, const Ray& ray, lon
 		Vector3 normal = intersectedTriangle->normal();
 
 		Vector3 randomDirection = randomVectorOnHemisphere(normal);
-//		if(Vector3::dot(normal, ray.getDirection()) > 0.0f) {
-//			randomDirection.negate();
-//		}
-//		cout << "normal " << normal << endl;
 		const Ray newRay { intersectionPoint, randomDirection };
 
 		if (debug) {

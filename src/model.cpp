@@ -106,7 +106,7 @@ Mesh Model::processMesh(aiMesh *m, const aiScene *scene) {
 	return mesh;
 }
 
-Triangles* modelToTriangles(Model* model, Triangles& lights, Matrix4x4 transformation) {
+Triangles* modelToTriangles(Model* model, Matrix4x4 transformation) {
 	Triangles* triangles = new Triangles;
 	long id = 0;
 	for (const Mesh& mesh : model->meshes) {
@@ -123,9 +123,6 @@ Triangles* modelToTriangles(Model* model, Triangles& lights, Matrix4x4 transform
 			Vector3 ac = c - a;
 			Triangle* triangle = new Triangle(id++, va, vb, vc, ab, ac, &mesh.material);
 			triangles->push_back(triangle);
-			if (!triangle->material->emmisive.isZero()) {
-				lights.push_back(triangle);
-			}
 		}
 	}
 	return triangles;

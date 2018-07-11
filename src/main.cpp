@@ -24,8 +24,6 @@
 
 using namespace std;
 
-void loadModel(string);
-
 unique_ptr<Window> window;
 Renderer* renderer;
 OpenglModel* om;
@@ -54,21 +52,9 @@ void removeCurrentModel() {
 	}
 }
 
-Triangles lights { };
-
-void dropCallback(GLFWwindow* window, int count, const char** paths) {
-	string path = string(paths[0]);
-	replace(path.begin(), path.end(), '\\', '/');
-	cout << path << endl;
-
-	removeCurrentModel();
-	loadModel(path);
-	om = new OpenglModel(*m);
-}
-
 void loadModel(string path) {
 	m = new Model(path);
-	modelTriangles = modelToTriangles(m, lights);
+	modelTriangles = modelToTriangles(m);
 	kdTree = new KdTree(*modelTriangles, 8 + 1.3 * log(modelTriangles->size()));
 
 	printf("depth %u\n", depth(kdTree));
@@ -124,7 +110,16 @@ int main(int argc, char** argv) {
 		renderer->setViewport(width, height);
 	});
 
-	window->setDropCallback(dropCallback);
+	window->setDropCallback([](GLFWwindow* window, int count, const char** paths) {
+		string path = string(paths[0]);
+		replace(path.begin(), path.end(), '\\', '/');
+		cout << path << endl;
+
+		removeCurrentModel();
+		loadModel(path);
+		om = new OpenglModel(*m);
+	});
+
 	window->setKeyCallback([](GLFWwindow* win, int key, int scancode, int action, int mods) {
 		if (key == GLFW_KEY_X && action == GLFW_PRESS) {
 			removeCurrentModel();
